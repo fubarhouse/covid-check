@@ -16,7 +16,7 @@ useful to you, then please give it a try.
 I don't intend to ship this on the AUR or any other distribution platform. 
 Instead, you can install or build from source using the `go` toolchain:
 ```shell
-go install github.com/fubarhouse/covid-check
+go install github.com/fubarhouse/covid-check@latest
 ```
 
 ## Usage

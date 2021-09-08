@@ -1,4 +1,4 @@
-module covid-check
+module github.com/fubarhouse/covid-check
 
 go 1.17
 
