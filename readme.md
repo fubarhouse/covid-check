@@ -41,6 +41,20 @@ covid-check [flags]
 | Suburb     | `-suburb woden`          | search string of suburb field                                     |
 | Width      | `-width 50`              | with of table columns, change to make the table wider             |
 
+### Example
+
+```shell
+$ covid-check -suburb woden
++----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+|  STATUS  |             LOCATION              |      STREET       | SUBURB | STATE |   DATE    | START TIME | FINISH TIME | CONTACT |
++----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+| Archived | Chemist Warehouse Woden           | 24 Corinna Street | Woden  | ACT   | 24-8-2021 | 2:30pm     | 4:00pm      | Monitor |
+|          | San Churro Woden, Westfield Woden |                   | Woden  | ACT   | 26-8-2021 | 7:00pm     | 8:00pm      | Monitor |
++----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+total items found: 2
+```
+
+
 ## License
 
 MIT - no obligations or warranties are provided with this application.
