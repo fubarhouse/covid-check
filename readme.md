@@ -38,7 +38,7 @@ covid-check [flags]
 | State      | `-state ACT`             | search string of state field                                      |
 | Status     | `-status new`            | search string of status field                                     |
 | Street     | `-street Hibberson`      | search string of street field                                     |
-| Suburb     | `-suburb casey`          | search string of suburb field                                     |
+| Suburb     | `-suburb woden`          | search string of suburb field                                     |
 | Width      | `-width 50`              | with of table columns, change to make the table wider             |
 
 ## License
