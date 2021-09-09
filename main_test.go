@@ -23,7 +23,7 @@ func TestData(t *testing.T) {
 	}
 	err = covid.GetCSVData()
 	if err != nil {
-
+		t.Fail()
 	}
 	covid.SetCSVData()
 	if len(covid.RawResults.Items) == 0 {
@@ -32,9 +32,11 @@ func TestData(t *testing.T) {
 
 	covid.Query(&Entry{})
 	for _, item := range covid.FilteredResults.Items {
+		// Is row item nil?
 		if fmt.Sprint(&Entry{}) == fmt.Sprint(item) {
 			t.Fail()
 		}
+		// Do the field counts match expected values?
 		if item.FieldCount != 13 && item.FieldCount != 14 {
 			t.Fail()
 		}
