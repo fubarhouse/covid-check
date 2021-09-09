@@ -27,19 +27,20 @@ covid-check [flags]
 
 ### Flags
 
-| Name       | Example                  | Description |
-|------------|--------------------------|---------|
-| Contact    | `-contact new`           | search string for contact field                                   |
-| Date       | `-date 01/07/2021`       | search string for date field - must be in the format `DD/MM/YYYY` |
-| Start Time | `-start-time 9:00am`     | search string for arrival time - represented as a string          |
-| End Time   | `-end-time 5:00pm`       | search string for departure time - represented as a string        |
-| Endpoint   | `-endpoint https://...`  | url of ACT government website page with data to scrape       |
-| Location   | `-location Coles`        | search string of location field                                   |
-| State      | `-state ACT`             | search string of state field                                      |
-| Status     | `-status new`            | search string of status field                                     |
-| Street     | `-street Hibberson`      | search string of street field                                     |
-| Suburb     | `-suburb woden`          | search string of suburb field                                     |
-| Width      | `-width 50`              | with of table columns, change to make the table wider             |
+| Name        | Example                 | Description                                                       |
+|-------------|-------------------------|-------------------------------------------------------------------|
+| Field Count | `-field-count 12`       | for debugging the dataset and logic around field translation      |
+| Contact     | `-contact new`          | search string for contact field                                   |
+| Date        | `-date 01/07/2021`      | search string for date field - must be in the format `DD/MM/YYYY` |
+| Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string          |
+| End Time    | `-end-time 5:00pm`      | search string for departure time - represented as a string        |
+| Endpoint    | `-endpoint https://...` | url of ACT government website page with data to scrape            |
+| Location    | `-location Coles`       | search string of location field                                   |
+| State       | `-state ACT`            | search string of state field                                      |
+| Status      | `-status new`           | search string of status field                                     |
+| Street      | `-street Hibberson`     | search string of street field                                     |
+| Suburb      | `-suburb woden`         | search string of suburb field                                     |
+| Width       | `-width 50`             | with of table columns, change to make the table wider             |
 
 ### Example
 

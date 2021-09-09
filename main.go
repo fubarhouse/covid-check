@@ -16,6 +16,9 @@ import (
 )
 
 var (
+	// fieldCount is a debugging variable which will filter results
+	// by the count of the fields in the row of the RawCSV line item.
+	fieldCount int
 	// endpoint is the URL/endpoint which contains the exposure sites.
 	// notably, this is only compatible with the Canberra website.
 	// other examples using a similar convention would need to be
@@ -25,38 +28,38 @@ var (
 	// only return results when set to "casual", "monitor" or "close".
 	// There is no way to filter for nil value as the filter checks
 	// if the result contains the input.
-	contact  string
+	contact string
 	// location is the filter for the location field, and will check
 	// if the result contains the input information.
 	location string
 	// suburb is the filter for the suburb field, and will check
 	// if the result contains the input information.
-	suburb   string
+	suburb string
 	// status is the filter for the status field, and will check
 	// if the result contains the input information. Results will
 	// only be returned for "archived", "updated" or "new".
-	status   string
+	status string
 	// street is the filter for the street field, and will check
 	// if the result contains the input information.
-	street   string
+	street string
 	// state is the filter for the state field, and will check
 	// if the result contains the input information. Results will
 	// only be returned if the value is not set, or set to "ACT".
-	state    string
+	state string
 	// udate is the filter for the time field, and will check
 	// if the result contains the input information. You will need
 	// to set this to something in the format of 01/02/2006 for
 	// this to actually work - failing this the application will panic
 	// unless it is not set.
-	udate    string
+	udate string
 	// atime is the filter for the arrival time field, and will check
 	// if the result contains the input information. This is treated
 	// strictly as a string at this time.
-	atime    string
+	atime string
 	// dtime is the filter for the finish time field, and will check
 	// if the result contains the input information. This is treated
 	//	// strictly as a string at this time.
-	dtime    string
+	dtime string
 	// width is the width of the table column, should you be so inclined.
 	width int
 )
@@ -70,26 +73,28 @@ type (
 	// Entry is a stuct which represents the data to be displayed.
 	Entry struct {
 		//SHA256 			 sha256.sum224 // todo
+		// FieldCount is the amount of fields in the row of the raw CSV Entry
+		FieldCount int
 		// Status is the status of the Entry - either New, Updated, Archived,
 		// or without a value - nil.
-		Status           string
+		Status string
 		// Location is the location as provided by the data.
 		ExposureLocation string
 		// Street is supposed to be the street address - the data
 		// is a little inconsistent - we've tried to fix that.
-		Street           string
+		Street string
 		// Suburb is the suburb of the Entry.
-		Suburb           string
+		Suburb string
 		// State is the state of the Entry - can only be "ACT" or nil.
-		State            string
+		State string
 		// Date is a valid *time.Time entry used for querying or presenting.
-		Date             *time.Time
+		Date *time.Time
 		// Arrival time is the exposure start time represented as a string.
-		ArrivalTime      string
+		ArrivalTime string
 		// Arrival time is the exposure finish time represented as a string.
-		DepartureTime    string
+		DepartureTime string
 		// Contact is the contact category - either Close, Casual or Monitor.
-		Contact          string
+		Contact string
 	}
 )
 
@@ -115,20 +120,20 @@ func trimQuotes(in string) (out string) {
 // we need to put data into the system and display it to the user.
 type x struct {
 	// DataEndPoint is the endpoint of the input CSV file to scrape and process
-	DataEndpoint    string
+	DataEndpoint string
 	// RawCSV is the raw CSV data represented as a string.
-	RawCSV          string
+	RawCSV string
 	// RawHTML is the raw HTML of the web page endpoint represented as a string
-	RawHTML         string
+	RawHTML string
 	// RawResults is the unchanged, processed input from the CSV file.
-	RawResults      Entries
+	RawResults Entries
 	// FilteredResults is the Entries object of all values matching input queries.
 	// If no input queries are provided, this objeect will match the length of
 	// RawResults.
 	FilteredResults Entries
 	// Filter is a single input Entry which is used to query against the results
 	// in order to filter the list of results to the end users preference.
-	Filter          Entry
+	Filter Entry
 }
 
 // GetHTML will retrieve the HTML endpoint and add it to the RawHTML field.
@@ -201,10 +206,20 @@ func (x *x) Query(e *Entry) {
 										dateTwo := fmt.Sprintf("%d/%d/%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
 										if dateTwo != "1/1/1" {
 											if strings.Contains(dateOne, dateTwo) {
-												newResults = append(newResults, dataEntry)
+												if dataEntry.FieldCount == e.FieldCount {
+													newResults = append(newResults, dataEntry)
+												}
+												if e.FieldCount == 0 {
+													newResults = append(newResults, dataEntry)
+												}
 											}
 										} else {
-											newResults = append(newResults, dataEntry)
+											if dataEntry.FieldCount == e.FieldCount {
+												newResults = append(newResults, dataEntry)
+											}
+											if e.FieldCount == 0 {
+												newResults = append(newResults, dataEntry)
+											}
 										}
 									}
 								}
@@ -251,22 +266,9 @@ func (x *x) SetCSVData() {
 		// In order to display the information correctly, we're going to do some
 		// trickery with the input fields, which components will have a length of 10, 11 or 12
 		// depending on the edge-case. We should probably make this easier later...
+
 		switch len(components) {
-		case 12:
-			datestring := strings.Split(trimQuotes(components[8]), " ")[0]
-			t, _ := time.Parse("02/01/2006", datestring)
-			newEntry = &Entry{
-				Status:           trimQuotes(components[1]),
-				ExposureLocation: trimQuotes(components[2]),
-				Street:           fmt.Sprintf("%s,%s", trimQuotes(components[3]), trimQuotes(components[4])),
-				Suburb:           trimQuotes(components[6]),
-				State:            trimQuotes(components[7]),
-				Date:             &t,
-				ArrivalTime:      trimQuotes(components[9]),
-				DepartureTime:    trimQuotes(components[10]),
-				Contact:          trimQuotes(components[11]),
-			}
-		case 11:
+		case 14:
 			datestring := strings.Split(trimQuotes(components[7]), " ")[0]
 			t, _ := time.Parse("02/01/2006", datestring)
 			newEntry = &Entry{
@@ -280,7 +282,7 @@ func (x *x) SetCSVData() {
 				DepartureTime:    trimQuotes(components[9]),
 				Contact:          trimQuotes(components[10]),
 			}
-		case 10:
+		case 13:
 			datestring := strings.Split(trimQuotes(components[6]), " ")[0]
 			t, _ := time.Parse("02/01/2006", datestring)
 			newEntry = &Entry{
@@ -296,6 +298,7 @@ func (x *x) SetCSVData() {
 			}
 		}
 
+		newEntry.FieldCount = len(components)
 		x.AddRaw(newEntry)
 		x.AddFiltered(newEntry)
 	}
@@ -330,13 +333,14 @@ func (x *x) AddRaw(e *Entry) {
 func (x *x) Render() {
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Status", "Location", "Street", "Suburb", "State", "Date", "Start Time", "Finish Time", "Contact"})
+	table.SetHeader([]string{"", "Status", "Location", "Street", "Suburb", "State", "Date", "Start Time", "Finish Time", "Contact"})
 	table.SetCaption(false, "COVID-19 Exposure Sites")
 	table.SetColWidth(width)
 
 	for _, item := range x.FilteredResults.Items {
 
 		s := []string{
+			fmt.Sprintf("%d", item.FieldCount),
 			item.Status,
 			item.ExposureLocation,
 			item.Street,
@@ -375,6 +379,7 @@ func main() {
 	flag.StringVar(&atime, "start-time", "", "start time")
 	flag.StringVar(&dtime, "end-time", "", "end time")
 	flag.IntVar(&width, "width", 50, "width of table columns")
+	flag.IntVar(&fieldCount, "field-count", 0, "count of fields in row")
 	flag.Parse()
 
 	// validate input
@@ -406,6 +411,7 @@ func main() {
 	}
 
 	covid.Query(&Entry{
+		FieldCount:       fieldCount,
 		Status:           status,
 		ExposureLocation: location,
 		Street:           street,
