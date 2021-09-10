@@ -62,6 +62,8 @@ var (
 	dtime string
 	// width is the width of the table column, should you be so inclined.
 	width int
+	// query is an arbitrary, non-specific query
+	query string
 )
 
 type (
@@ -192,16 +194,35 @@ func (x *x) Query(e *Entry) {
 	newResults := []Entry{}
 	for _, dataEntry := range x.RawResults.Items {
 
+
+		// todo
+		//v := reflect.ValueOf(*e)
+		//y := reflect.ValueOf(dataEntry)
+		//for i := 0; i < v.NumField(); i++ {
+		//
+		//	fmt.Println(i)
+		//	src := y.Field(i).String()
+		//	cmp := v.Field(i).String()
+		//
+		//	fmt.Println(v.Field(i))
+		//
+		//	if cmp != "" && strings.Contains(src, cmp) {
+		//		//fmt.Println("YAY")
+		//		//fmt.Printf("%s|||%s\n", strings.ToLower(fmt.Sprint(y.Field(i))), strings.ToLower(fmt.Sprint(v.Field(i))))
+		//	}
+		//}
+
+
 		// TODO this needs an elegant solution.
 		// TODO compare against lowercase.
-		if strings.Contains(dataEntry.Suburb, e.Suburb) && strings.Contains(dataEntry.ExposureLocation, e.ExposureLocation) {
-			if strings.Contains(dataEntry.Contact, e.Contact) {
-				if strings.Contains(dataEntry.Status, e.Status) {
-					if strings.Contains(dataEntry.State, e.State) {
-						if strings.Contains(dataEntry.Street, e.Street) {
-							if strings.Contains(dataEntry.State, e.State) {
-								if strings.Contains(dataEntry.ArrivalTime, e.ArrivalTime) {
-									if strings.Contains(dataEntry.DepartureTime, e.DepartureTime) {
+		if strings.Contains(strings.ToLower(dataEntry.Suburb), strings.ToLower(e.Suburb)) && strings.Contains(strings.ToLower(dataEntry.ExposureLocation), strings.ToLower(e.ExposureLocation)) {
+			if strings.Contains(strings.ToLower(dataEntry.Contact), strings.ToLower(e.Contact)) {
+				if strings.Contains(strings.ToLower(dataEntry.Status), strings.ToLower(e.Status)) {
+					if strings.Contains(strings.ToLower(dataEntry.State), strings.ToLower(e.State)) {
+						if strings.Contains(strings.ToLower(dataEntry.Street), strings.ToLower(e.Street)) {
+							if strings.Contains(strings.ToLower(dataEntry.State), strings.ToLower(e.State)) {
+								if strings.Contains(strings.ToLower(dataEntry.ArrivalTime), strings.ToLower(e.ArrivalTime)) {
+									if strings.Contains(strings.ToLower(dataEntry.DepartureTime), strings.ToLower(e.DepartureTime)) {
 										dateOne := fmt.Sprintf("%d/%d/%d", dataEntry.Date.Day(), dataEntry.Date.Month(), dataEntry.Date.Year())
 										dateTwo := fmt.Sprintf("%d/%d/%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
 										if dateTwo != "1/1/1" {
@@ -229,11 +250,19 @@ func (x *x) Query(e *Entry) {
 				}
 			}
 		}
+
 		x.FilteredResults.Items = newResults
+		dataEntryString := fmt.Sprint(dataEntry)
+		if query != "" && strings.Contains(strings.ToLower(dataEntryString), query) {
+			fmt.Println(dataEntryString, query)
+			newResults = append(newResults, dataEntry)
+		}
 	}
+
+	x.FilteredResults.Items = newResults
 }
 
-// GetCSVData will grab the CSV data file and process set the RawCSV
+// GetCSVData will grabx.FilteredResults.Items = append(x.FilteredResults.Items, dataEntry) the CSV data file and process set the RawCSV
 // field to the contents of that file.
 func (x *x) GetCSVData() error {
 	resp, err := http.Get(x.DataEndpoint)
@@ -256,65 +285,66 @@ func (x *x) GetCSVData() error {
 	return nil
 }
 
+// fieldTranslate will ensure the Entry is processed and displayed correctly,
+// as structural changes will impact this. Daily so far the tool has broken
+// because of some of the logic, so here we find a better way.
+func fieldTranslate(e *string) Entry {
+
+	components := strings.Split(*e, ",")
+	newEntry := &Entry{}
+
+	// location, street are less predictable...
+
+	// In order to display the information correctly, we're going to do some
+	// trickery with the input fields, which components will have a length of 10, 11 or 12
+	// depending on the edge-case. We should probably make this easier later...
+
+	datestring := strings.Split(trimQuotes(components[len(components)-4]), " ")[0]
+	t, _ := time.Parse("02/01/2006", datestring)
+
+	newEntry = &Entry{
+		Status:        trimQuotes(components[1]),
+		Suburb:        trimQuotes(components[len(components)-6]),
+		State:         trimQuotes(components[len(components)-5]),
+		Date:          &t,
+		ArrivalTime:   trimQuotes(components[len(components)-3]),
+		DepartureTime: trimQuotes(components[len(components)-2]),
+		Contact:       trimQuotes(components[len(components)-1]),
+	}
+
+	newEntry.FieldCount = len(components)
+
+	// Handle edge-cases in data here:
+	switch newEntry.FieldCount {
+	case 10:
+		newEntry.ExposureLocation = trimQuotes(components[2])
+		newEntry.Street = trimQuotes(components[3])
+	case 11:
+		var location string
+		if trimQuotes(components[2]) != "" {
+			location = fmt.Sprintf("%s", trimQuotes(components[2]))
+		}
+		if trimQuotes(components[3]) != "" {
+			location = fmt.Sprintf("%s, %s", location, trimQuotes(components[3]))
+		}
+		newEntry.ExposureLocation = location
+		newEntry.Street = ""
+	case 12:
+		newEntry.ExposureLocation = fmt.Sprintf("%s, %s, %s", trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4]))
+		newEntry.Street = ""
+	}
+
+	return *newEntry
+
+}
+
 // SetCSVData will populate the RawResults field with the inputs after
 // processing the RawCSV data into the expected format (type Entry)
 func (x *x) SetCSVData() {
 	for _, dataEntry := range strings.Split(x.RawCSV, "\n") {
-		components := strings.Split(dataEntry, ",")
-		newEntry := &Entry{}
-
-		// In order to display the information correctly, we're going to do some
-		// trickery with the input fields, which components will have a length of 10, 11 or 12
-		// depending on the edge-case. We should probably make this easier later...
-
-		switch len(components) {
-		case 12:
-			datestring := strings.Split(trimQuotes(components[8]), " ")[0]
-			t, _ := time.Parse("02/01/2006", datestring)
-			newEntry = &Entry{
-				Status:           trimQuotes(components[1]),
-				ExposureLocation: fmt.Sprintf("%s, %s", trimQuotes(components[2]), trimQuotes(components[3])),
-				Street:           trimQuotes(components[5]),
-				Suburb:           trimQuotes(components[6]),
-				State:            trimQuotes(components[7]),
-				Date:             &t,
-				ArrivalTime:      trimQuotes(components[9]),
-				DepartureTime:    trimQuotes(components[10]),
-				Contact:          trimQuotes(components[11]),
-			}
-		case 11:
-			datestring := strings.Split(trimQuotes(components[7]), " ")[0]
-			t, _ := time.Parse("02/01/2006", datestring)
-			newEntry = &Entry{
-				Status:           trimQuotes(components[1]),
-				ExposureLocation: trimQuotes(components[2]),
-				Street:           "",
-				Suburb:           trimQuotes(components[5]),
-				State:            trimQuotes(components[6]),
-				Date:             &t,
-				ArrivalTime:      trimQuotes(components[8]),
-				DepartureTime:    trimQuotes(components[9]),
-				Contact:          trimQuotes(components[10]),
-			}
-		case 10:
-			datestring := strings.Split(trimQuotes(components[6]), " ")[0]
-			t, _ := time.Parse("02/01/2006", datestring)
-			newEntry = &Entry{
-				Status:           trimQuotes(components[1]),
-				ExposureLocation: trimQuotes(components[2]),
-				Street:           trimQuotes(components[3]),
-				Suburb:           trimQuotes(components[4]),
-				State:            trimQuotes(components[5]),
-				Date:             &t,
-				ArrivalTime:      trimQuotes(components[7]),
-				DepartureTime:    trimQuotes(components[8]),
-				Contact:          trimQuotes(components[9]),
-			}
-		}
-
-		newEntry.FieldCount = len(components)
-		x.AddRaw(newEntry)
-		x.AddFiltered(newEntry)
+		newEntry := fieldTranslate(&dataEntry)
+		x.AddRaw(&newEntry)
+		x.AddFiltered(&newEntry)
 	}
 
 	// todo: sort by date
@@ -392,20 +422,10 @@ func main() {
 	flag.StringVar(&udate, "date", "", "date (formatted strictly as DD/MM/YYYY)")
 	flag.StringVar(&atime, "start-time", "", "start time")
 	flag.StringVar(&dtime, "end-time", "", "end time")
+	flag.StringVar(&query, "query", "", "arbitrary query")
 	flag.IntVar(&width, "width", 50, "width of table columns")
 	flag.IntVar(&fieldCount, "field-count", 0, "count of fields in row")
 	flag.Parse()
-
-	// validate input
-	contact = strings.Title(contact)
-	location = strings.Title(location)
-	suburb = strings.Title(suburb)
-	status = strings.Title(status)
-	state = strings.ToUpper(state)
-	// ignore street, date & time fields
-
-	// debugging note
-	// Kaleen has an example of a location w/ a ',' char. (address)
 
 	covid := &x{}
 	covid.GetHTML(endpoint)
