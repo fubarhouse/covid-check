@@ -268,12 +268,26 @@ func (x *x) SetCSVData() {
 		// depending on the edge-case. We should probably make this easier later...
 
 		switch len(components) {
-		case 14:
-			datestring := strings.Split(trimQuotes(components[7]), " ")[0]
+		case 12:
+			datestring := strings.Split(trimQuotes(components[8]), " ")[0]
 			t, _ := time.Parse("02/01/2006", datestring)
 			newEntry = &Entry{
 				Status:           trimQuotes(components[1]),
 				ExposureLocation: fmt.Sprintf("%s, %s", trimQuotes(components[2]), trimQuotes(components[3])),
+				Street:           trimQuotes(components[5]),
+				Suburb:           trimQuotes(components[6]),
+				State:            trimQuotes(components[7]),
+				Date:             &t,
+				ArrivalTime:      trimQuotes(components[9]),
+				DepartureTime:    trimQuotes(components[10]),
+				Contact:          trimQuotes(components[11]),
+			}
+		case 11:
+			datestring := strings.Split(trimQuotes(components[7]), " ")[0]
+			t, _ := time.Parse("02/01/2006", datestring)
+			newEntry = &Entry{
+				Status:           trimQuotes(components[1]),
+				ExposureLocation: trimQuotes(components[2]),
 				Street:           "",
 				Suburb:           trimQuotes(components[5]),
 				State:            trimQuotes(components[6]),
@@ -282,7 +296,7 @@ func (x *x) SetCSVData() {
 				DepartureTime:    trimQuotes(components[9]),
 				Contact:          trimQuotes(components[10]),
 			}
-		case 13:
+		case 10:
 			datestring := strings.Split(trimQuotes(components[6]), " ")[0]
 			t, _ := time.Parse("02/01/2006", datestring)
 			newEntry = &Entry{

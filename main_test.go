@@ -37,7 +37,7 @@ func TestData(t *testing.T) {
 			t.Fail()
 		}
 		// Do the field counts match expected values?
-		if item.FieldCount != 13 && item.FieldCount != 14 {
+		if item.FieldCount != 10 && item.FieldCount != 11 && item.FieldCount != 12 {
 			t.Fail()
 		}
 	}
