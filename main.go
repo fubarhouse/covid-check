@@ -479,6 +479,7 @@ func main() {
 	flag.StringVar(&atime, "start-time", "", "start time")
 	flag.StringVar(&dtime, "end-time", "", "end time")
 	flag.StringVar(&query, "query", "", "arbitrary query")
+	flag.StringVar(&query, "q", "", "arbitrary query")
 	flag.IntVar(&width, "width", 50, "width of table columns")
 	flag.IntVar(&fieldCount, "field-count", 0, "count of fields in row")
 	flag.Parse()
