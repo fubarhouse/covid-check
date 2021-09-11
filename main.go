@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -67,6 +68,18 @@ var (
 )
 
 type (
+
+	// MultiQuery is a bool slice which filtered results must validate against.
+	MultiQuery []bool
+
+	// MultiQueries is a struct with a MultiQuery to store filter results for
+	// an individual Entry. It is intended that a successful filter will have
+	// all items in Items value as true, otherwise the item will be omitted
+	// from the final result.
+	MultiQueries struct {
+		Items MultiQuery
+	}
+
 	// Entries is a slice of type Entry.
 	Entries struct {
 		Items []Entry
@@ -141,11 +154,11 @@ type x struct {
 // GetHTML will retrieve the HTML endpoint and add it to the RawHTML field.
 func (x *x) GetHTML(endpoint string) error {
 	resp, err := http.Get(endpoint)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		log.Fatalf("failed to fetch data: %d %s", resp.StatusCode, resp.Status)
@@ -183,6 +196,45 @@ func (x *x) GetCSVReference() error {
 	return nil
 }
 
+// check will provide field validation, and will add the result to a
+// *MultiQueries if the validation passes. This will later be checked
+// before being added to the filtered results in Query.
+func check(a, b interface{}, mq *MultiQueries) bool {
+	found := false
+	if a == nil {
+		return false
+	}
+	switch v := a.(type) {
+	case int:
+		// Here, our only option is FieldCount, so comparing against full value is best.
+		if a.(int) == b.(int) {
+			found = true
+		}
+	case string:
+		// Note: time is also handled via string.
+		if strings.Contains(strings.ToLower(b.(string)), strings.ToLower(a.(string))) {
+			found = true
+		}
+		if c, _ := regexp.Match(strings.ToLower(a.(string)), []byte(strings.ToLower(b.(string)))); c {
+			found = true
+		}
+		// If the dates are queried, we check for absolute equality.
+		if a == b {
+			found = true
+		}
+	default:
+		fmt.Printf("no handler for %v was found\n", v)
+	}
+
+	if found {
+		mq.Items = append(mq.Items, true)
+		return true
+	}
+
+	mq.Items = append(mq.Items, false)
+	return false
+}
+
 // Query will clear out the FilteredResults field and repopulate it by querying
 // each result against the input Entry object.
 func (x *x) Query(e *Entry) {
@@ -191,86 +243,90 @@ func (x *x) Query(e *Entry) {
 	}
 	x.Filter = *e
 	x.FilteredResults = Entries{}
-	newResults := []Entry{}
 	for _, dataEntry := range x.RawResults.Items {
 
+		mq := MultiQueries{}
+		match := true
 
-		// todo
-		//v := reflect.ValueOf(*e)
-		//y := reflect.ValueOf(dataEntry)
-		//for i := 0; i < v.NumField(); i++ {
-		//
-		//	fmt.Println(i)
-		//	src := y.Field(i).String()
-		//	cmp := v.Field(i).String()
-		//
-		//	fmt.Println(v.Field(i))
-		//
-		//	if cmp != "" && strings.Contains(src, cmp) {
-		//		//fmt.Println("YAY")
-		//		//fmt.Printf("%s|||%s\n", strings.ToLower(fmt.Sprint(y.Field(i))), strings.ToLower(fmt.Sprint(v.Field(i))))
-		//	}
-		//}
-
-
-		// TODO this needs an elegant solution.
-		// TODO compare against lowercase.
-		if strings.Contains(strings.ToLower(dataEntry.Suburb), strings.ToLower(e.Suburb)) && strings.Contains(strings.ToLower(dataEntry.ExposureLocation), strings.ToLower(e.ExposureLocation)) {
-			if strings.Contains(strings.ToLower(dataEntry.Contact), strings.ToLower(e.Contact)) {
-				if strings.Contains(strings.ToLower(dataEntry.Status), strings.ToLower(e.Status)) {
-					if strings.Contains(strings.ToLower(dataEntry.State), strings.ToLower(e.State)) {
-						if strings.Contains(strings.ToLower(dataEntry.Street), strings.ToLower(e.Street)) {
-							if strings.Contains(strings.ToLower(dataEntry.State), strings.ToLower(e.State)) {
-								if strings.Contains(strings.ToLower(dataEntry.ArrivalTime), strings.ToLower(e.ArrivalTime)) {
-									if strings.Contains(strings.ToLower(dataEntry.DepartureTime), strings.ToLower(e.DepartureTime)) {
-										dateOne := fmt.Sprintf("%d/%d/%d", dataEntry.Date.Day(), dataEntry.Date.Month(), dataEntry.Date.Year())
-										dateTwo := fmt.Sprintf("%d/%d/%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
-										if dateTwo != "1/1/1" {
-											if strings.Contains(dateOne, dateTwo) {
-												if dataEntry.FieldCount == e.FieldCount {
-													newResults = append(newResults, dataEntry)
-												}
-												if e.FieldCount == 0 {
-													newResults = append(newResults, dataEntry)
-												}
-											}
-										} else {
-											if dataEntry.FieldCount == e.FieldCount {
-												newResults = append(newResults, dataEntry)
-											}
-											if e.FieldCount == 0 {
-												newResults = append(newResults, dataEntry)
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
+		if e.FieldCount != 0 {
+			if b := check(e.FieldCount, dataEntry.FieldCount, &mq); b {
+				match = true
+			}
+		}
+		if e.Status != "" {
+			if b := check(e.Status, dataEntry.Status, &mq); b {
+				match = true
+			}
+		}
+		if e.ExposureLocation != "" {
+			if b := check(e.ExposureLocation, dataEntry.ExposureLocation, &mq); b {
+				match = true
+			}
+		}
+		if e.Street != "" {
+			if b := check(e.Street, dataEntry.Street, &mq); b {
+				match = true
+			}
+		}
+		if e.Suburb != "" {
+			if b := check(e.Suburb, dataEntry.Suburb, &mq); b {
+				match = true
+			}
+		}
+		if e.State != "" {
+			if b := check(e.State, dataEntry.State, &mq); b {
+				match = true
+			}
+		}
+		dateOne := fmt.Sprintf("%d-%d-%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
+		dateTwo := fmt.Sprintf("%d-%d-%d", dataEntry.Date.Day(), dataEntry.Date.Month(), dataEntry.Date.Year())
+		if dateOne != "1-1-1" {
+			if b := check(dateOne, dateTwo, &mq); b {
+				match = true
+			}
+		}
+		if e.ArrivalTime != "" {
+			if b := check(e.ArrivalTime, dataEntry.ArrivalTime, &mq); b {
+				match = true
+			}
+		}
+		if e.DepartureTime != "" {
+			if b := check(e.DepartureTime, dataEntry.DepartureTime, &mq); b {
+				match = true
+			}
+		}
+		if e.Contact != "" {
+			if b := check(e.Contact, dataEntry.Contact, &mq); b {
+				match = true
+			}
+		}
+		if query != "" {
+			if b := check(query, fmt.Sprint(dataEntry), &mq); b {
+				match = true
 			}
 		}
 
-		x.FilteredResults.Items = newResults
-		dataEntryString := fmt.Sprint(dataEntry)
-		if query != "" && strings.Contains(strings.ToLower(dataEntryString), query) {
-			fmt.Println(dataEntryString, query)
-			newResults = append(newResults, dataEntry)
+		for _, v := range mq.Items {
+			if !v {
+				match = false
+			}
+		}
+
+		if match {
+			x.FilteredResults.Items = append(x.FilteredResults.Items, dataEntry)
 		}
 	}
-
-	x.FilteredResults.Items = newResults
 }
 
 // GetCSVData will grabx.FilteredResults.Items = append(x.FilteredResults.Items, dataEntry) the CSV data file and process set the RawCSV
 // field to the contents of that file.
 func (x *x) GetCSVData() error {
 	resp, err := http.Get(x.DataEndpoint)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return err
 	}
+
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		log.Fatalf("failed to fetch data: %d %s", resp.StatusCode, resp.Status)
