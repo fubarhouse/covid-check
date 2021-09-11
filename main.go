@@ -222,6 +222,10 @@ func check(a, b interface{}, mq *MultiQueries) bool {
 		if a == b {
 			found = true
 		}
+		// nil checks for strings.
+		if strings.ToLower(a.(string)) == "nil" && strings.ToLower(b.(string)) == "" {
+			found = true
+		}
 	default:
 		fmt.Printf("no handler for %v was found\n", v)
 	}
