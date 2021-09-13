@@ -27,32 +27,50 @@ covid-check [flags]
 
 ### Flags
 
-| Name        | Example                 | Description                                                       |
-|-------------|-------------------------|-------------------------------------------------------------------|
-| Field Count | `-field-count 12`       | for debugging the dataset and logic around field translation      |
-| Contact     | `-contact new`          | search string for contact field                                   |
-| Date        | `-date 01/07/2021`      | search string for date field - must be in the format `DD/MM/YYYY` |
-| Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string          |
-| End Time    | `-end-time 5:00pm`      | search string for departure time - represented as a string        |
-| Endpoint    | `-endpoint https://...` | url of ACT government website page with data to scrape            |
-| Location    | `-location Coles`       | search string of location field                                   |
-| State       | `-state ACT`            | search string of state field                                      |
-| Status      | `-status new`           | search string of status field                                     |
-| Street      | `-street Hibberson`     | search string of street field                                     |
-| Suburb      | `-suburb woden`         | search string of suburb field                                     |
-| Width       | `-width 50`             | with of table columns, change to make the table wider             |
+| Name        | Example                 | Description                                                         |
+|-------------|-------------------------|---------------------------------------------------------------------|
+| Field Count | `-field-count 12`       | for debugging the dataset and logic around field translation        |
+| Contact     | `-contact new`          | search string for contact field                                     |
+| Date        | `-date 01/07/2021`      | search string for date field - must be in the format `DD/MM/YYYY`   |
+| Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string            |
+| End Time    | `-end-time 5:00pm`      | search string for departure time - represented as a string          |
+| Endpoint    | `-endpoint https://...` | url of ACT government website page with data to scrape              |
+| Query       | `--query phillip`       | An arbitrary query - find anything matching input (including regex) |
+| Query       | `--q phillip`           | An arbitrary query - find anything matching input (including regex) |
+| Location    | `-location Coles`       | search string of location field                                     |
+| State       | `-state ACT`            | search string of state field                                        |
+| Status      | `-status new`           | search string of status field                                       |
+| Street      | `-street Hibberson`     | search string of street field                                       |
+| Suburb      | `-suburb woden`         | search string of suburb field                                       |
+| Width       | `-width 50`             | with of table columns, change to make the table wider               |
 
-### Example
+### Example(s)
 
 ```shell
 $ covid-check -suburb woden
-+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
-|  STATUS  |             LOCATION              |      STREET       | SUBURB | STATE |   DATE    | START TIME | FINISH TIME | CONTACT |
-+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
-| Archived | Chemist Warehouse Woden           | 24 Corinna Street | Woden  | ACT   | 24-8-2021 | 2:30pm     | 4:00pm      | Monitor |
-|          | San Churro Woden, Westfield Woden |                   | Woden  | ACT   | 26-8-2021 | 7:00pm     | 8:00pm      | Monitor |
-+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
++----+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+|    |  STATUS  |             LOCATION              |      STREET       | SUBURB | STATE |   DATE    | START TIME | FINISH TIME | CONTACT |
++----+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+| 11 | Archived | San Churro Woden, Westfield Woden |                   | Woden  | ACT   | 26-8-2021 | 7:00pm     | 8:00pm      | Monitor |
+| 10 | Archived | Chemist Warehouse Woden           | 24 Corinna Street | Woden  | ACT   | 24-8-2021 | 2:30pm     | 4:00pm      | Monitor |
++----+----------+-----------------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
 total items found: 2
+
+$ covid-check -suburb woden -street corinna
++----+----------+-------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+|    |  STATUS  |        LOCATION         |      STREET       | SUBURB | STATE |   DATE    | START TIME | FINISH TIME | CONTACT |
++----+----------+-------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+| 10 | Archived | Chemist Warehouse Woden | 24 Corinna Street | Woden  | ACT   | 24-8-2021 | 2:30pm     | 4:00pm      | Monitor |
++----+----------+-------------------------+-------------------+--------+-------+-----------+------------+-------------+---------+
+total items found: 1
+
+$ covid-check -suburb woden -location westfield
++----+----------+-----------------------------------+--------+--------+-------+-----------+------------+-------------+---------+
+|    |  STATUS  |             LOCATION              | STREET | SUBURB | STATE |   DATE    | START TIME | FINISH TIME | CONTACT |
++----+----------+-----------------------------------+--------+--------+-------+-----------+------------+-------------+---------+
+| 11 | Archived | San Churro Woden, Westfield Woden |        | Woden  | ACT   | 26-8-2021 | 7:00pm     | 8:00pm      | Monitor |
++----+----------+-----------------------------------+--------+--------+-------+-----------+------------+-------------+---------+
+total items found: 1
 ```
 
 

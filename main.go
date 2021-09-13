@@ -17,6 +17,9 @@ import (
 )
 
 var (
+	// rawOutput tells the app to print the raw csv data instead of
+	// rendering a table.
+	rawOutput = true
 	// fieldCount is a debugging variable which will filter results
 	// by the count of the fields in the row of the RawCSV line item.
 	fieldCount int
@@ -78,6 +81,15 @@ type (
 	// from the final result.
 	MultiQueries struct {
 		Items MultiQuery
+	}
+
+	// QueryParams are extra settings for Query operation which aren't associated
+	// to the Entry values.
+	QueryParams struct {
+		// PrintRAWCSV is a bool which will instruct the Query operation to print
+		// the values, rather than append them to the output list for rendering.
+		PrintRAWCSV bool
+		// todo move non-entry associated fields & vars into params. (eg width)
 	}
 
 	// Entries is a slice of type Entry.
@@ -241,7 +253,7 @@ func check(a, b interface{}, mq *MultiQueries) bool {
 
 // Query will clear out the FilteredResults field and repopulate it by querying
 // each result against the input Entry object.
-func (x *x) Query(e *Entry) {
+func (x *x) Query(e *Entry, params QueryParams) {
 	if fmt.Sprint(*e) == fmt.Sprint(x.Filter) {
 		return
 	}
@@ -282,11 +294,13 @@ func (x *x) Query(e *Entry) {
 				match = true
 			}
 		}
-		dateOne := fmt.Sprintf("%d-%d-%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
-		dateTwo := fmt.Sprintf("%d-%d-%d", dataEntry.Date.Day(), dataEntry.Date.Month(), dataEntry.Date.Year())
-		if dateOne != "1-1-1" {
-			if b := check(dateOne, dateTwo, &mq); b {
-				match = true
+		if e.Date != nil && fmt.Sprint(e.Date) != "1-1-1" {
+			dateOne := fmt.Sprintf("%d-%d-%d", e.Date.Day(), e.Date.Month(), e.Date.Year())
+			dateTwo := fmt.Sprintf("%d-%d-%d", dataEntry.Date.Day(), dataEntry.Date.Month(), dataEntry.Date.Year())
+			if dateOne != "1-1-1" {
+				if b := check(dateOne, dateTwo, &mq); b {
+					match = true
+				}
 			}
 		}
 		if e.ArrivalTime != "" {
@@ -316,13 +330,17 @@ func (x *x) Query(e *Entry) {
 			}
 		}
 
-		if match {
+		if match && !params.PrintRAWCSV {
 			x.FilteredResults.Items = append(x.FilteredResults.Items, dataEntry)
+		}
+
+		if match && params.PrintRAWCSV {
+			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.FieldCount, dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, dataEntry.Date, dataEntry.ArrivalTime, dataEntry.DepartureTime, dataEntry.Contact)
 		}
 	}
 }
 
-// GetCSVData will grabx.FilteredResults.Items = append(x.FilteredResults.Items, dataEntry) the CSV data file and process set the RawCSV
+// GetCSVData will grabx the CSV data file and set the RawCSV
 // field to the contents of that file.
 func (x *x) GetCSVData() error {
 	resp, err := http.Get(x.DataEndpoint)
@@ -375,6 +393,7 @@ func fieldTranslate(e *string) Entry {
 	newEntry.FieldCount = len(components)
 
 	// Handle edge-cases in data here:
+	// todo this needs to be better...
 	switch newEntry.FieldCount {
 	case 10:
 		newEntry.ExposureLocation = trimQuotes(components[2])
@@ -386,11 +405,13 @@ func fieldTranslate(e *string) Entry {
 		}
 		if trimQuotes(components[3]) != "" {
 			location = fmt.Sprintf("%s, %s", location, trimQuotes(components[3]))
+			newEntry.ExposureLocation = strings.Join([]string{location, trimQuotes(components[3])}, ", ")
 		}
 		newEntry.ExposureLocation = location
 		newEntry.Street = ""
 	case 12:
-		newEntry.ExposureLocation = fmt.Sprintf("%s, %s, %s", trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4]))
+		newEntry.ExposureLocation = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
+		newEntry.ExposureLocation = strings.TrimLeft(newEntry.ExposureLocation, ", ")
 		newEntry.Street = ""
 	}
 
@@ -398,7 +419,7 @@ func fieldTranslate(e *string) Entry {
 
 }
 
-// SetCSVData will populate the RawResults field with the inputs after
+// SetCSVData will populate the RawResultsww field with the inputs after
 // processing the RawCSV data into the expected format (type Entry)
 func (x *x) SetCSVData() {
 	for _, dataEntry := range strings.Split(x.RawCSV, "\n") {
@@ -484,6 +505,7 @@ func main() {
 	flag.StringVar(&dtime, "end-time", "", "end time")
 	flag.StringVar(&query, "query", "", "arbitrary query")
 	flag.StringVar(&query, "q", "", "arbitrary query")
+	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
 	flag.IntVar(&width, "width", 50, "width of table columns")
 	flag.IntVar(&fieldCount, "field-count", 0, "count of fields in row")
 	flag.Parse()
@@ -516,11 +538,13 @@ func main() {
 		ArrivalTime:      atime,
 		DepartureTime:    dtime,
 		Contact:          contact,
+	}, QueryParams{
+		PrintRAWCSV: rawOutput,
 	})
 
 	// Render!
 	covid.Render()
-	if len(covid.FilteredResults.Items) > 0 {
+	if !rawOutput && len(covid.FilteredResults.Items) > 0 {
 		fmt.Printf("total items found: %d\n", len(covid.FilteredResults.Items))
 	}
 
