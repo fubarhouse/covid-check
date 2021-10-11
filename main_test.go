@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 )
 
 var testEndpoint = "https://www.covid19.act.gov.au/act-status-and-response/act-covid-19-exposure-locations"
@@ -40,72 +39,95 @@ func TestDataLengthDynamic(t *testing.T) {
 			t.Fail()
 		}
 	})
-	t.Run("Running query 1/3", func(t *testing.T) {
-		result := false
-		timeFilter, _ := time.Parse("02/01/2006", "01/09/2021")
-
-		covid.Query(&Entry{
-			ExposureLocation: "7-Eleven Holt",
-			FieldCount:       10,
-			Date:             &timeFilter,
-			ArrivalTime:      "2:15pm",
-			DepartureTime:    "3:00pm",
-		}, QueryParams{
-			PrintRAWCSV: false,
-		})
-
-		if len(covid.FilteredResults.Items) == 1&& covid.FilteredResults.Items[0].FieldCount == 10  {
-			result = true
-
-		}
-		if !result {
-			t.Fail()
-		}
-	})
-
-	t.Run("Running query 2/3", func(t *testing.T) {
-		result := false
-		timeFilter, _ := time.Parse("02/01/2006", "01/09/2021")
-		covid.Query(&Entry{
-			ExposureLocation: "ALDI Belconnen",
-			FieldCount:       11,
-			Date:             &timeFilter,
-			ArrivalTime:      "7:00pm",
-			DepartureTime:    "7:30pm",
-		}, QueryParams{
-			PrintRAWCSV: false,
-		})
-
-		if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 11 {
-			result = true
-
-		}
-		if !result {
-			t.Fail()
+	t.Run("CLeaning Raw CSV data", func(t *testing.T) {
+		covid.Clean()
+		for _, line := range strings.Split(covid.RawCSV, "\n") {
+			if strings.HasPrefix(line, string(rune(13))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(13))) {
+				t.Fail()
+			}
+			if strings.HasPrefix(line, string(rune(33))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(33))) {
+				t.Fail()
+			}
+			if strings.HasPrefix(line, string(rune(44))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(44))) {
+				t.Fail()
+			}
 		}
 	})
 
-	t.Run("Running query 3/3", func(t *testing.T) {
-		result := false
-		covid.Query(&Entry{
-			ExposureLocation: "Kaleen Plaza Pharmacy",
-			FieldCount:       12,
-			Date:             &time.Time{},
-			ArrivalTime:      "6:15pm",
-			DepartureTime:    "7:10pm",
-		}, QueryParams{
-			PrintRAWCSV: false,
-		})
-
-		if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 12 {
-			result = true
-
-		}
-		if !result {
-			t.Fail()
-		}
-
-	})
+	//t.Run("Running query 1/3", func(t *testing.T) {
+	//	result := false
+	//	timeFilter, _ := time.Parse("02/01/2006", "27/09/2021")
+	//
+	//	covid.Query(&Entry{
+	//		ExposureLocation: "7-Eleven Holt",
+	//		FieldCount:       10,
+	//		Date:             &timeFilter,
+	//		ArrivalTime:      "9:00pm",
+	//		DepartureTime:    "9:40pm",
+	//	}, QueryParams{
+	//		PrintRAWCSV: false,
+	//	})
+	//
+	//	if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 10  {
+	//		result = true
+	//
+	//	}
+	//	if !result {
+	//		t.Fail()
+	//	}
+	//})
+	//
+	//t.Run("Running query 2/3", func(t *testing.T) {
+	//	result := false
+	//	timeFilter, _ := time.Parse("02/01/2006", "04/10/2021")
+	//	covid.Query(&Entry{
+	//		ExposureLocation: "ALDI Belconnen",
+	//		FieldCount:       11,
+	//		Date:             &timeFilter,
+	//		ArrivalTime:      "12:45pm",
+	//		DepartureTime:    "1:45pm",
+	//	}, QueryParams{
+	//		PrintRAWCSV: false,
+	//	})
+	//
+	//	if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 11 {
+	//		result = true
+	//
+	//	}
+	//	if !result {
+	//		t.Fail()
+	//	}
+	//})
+	//
+	//t.Run("Running query 3/3", func(t *testing.T) {
+	//	result := false
+	//	covid.Query(&Entry{
+	//		ExposureLocation: "Kaleen Plaza Pharmacy",
+	//		FieldCount:       12,
+	//		Date:             &time.Time{},
+	//		ArrivalTime:      "6:15pm",
+	//		DepartureTime:    "7:10pm",
+	//	}, QueryParams{
+	//		PrintRAWCSV: false,
+	//	})
+	//
+	//	if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 12 {
+	//		result = true
+	//
+	//	}
+	//	if !result {
+	//		t.Fail()
+	//	}
+	//})
 }
 
 // TestDataLengthStatic will take expected values as static content, and run
@@ -156,6 +178,29 @@ func TestData(t *testing.T) {
 		err = covid.GetCSVData()
 		if err != nil {
 			t.Fail()
+		}
+	})
+	t.Run("Cleaning CSV content", func(t *testing.T) {
+		covid.Clean()
+		for _, line := range strings.Split(covid.RawCSV, "\n") {
+			if strings.HasPrefix(line, string(rune(13))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(13))) {
+				t.Fail()
+			}
+			if strings.HasPrefix(line, string(rune(33))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(33))) {
+				t.Fail()
+			}
+			if strings.HasPrefix(line, string(rune(44))) {
+				t.Fail()
+			}
+			if strings.HasSuffix(line, string(rune(44))) {
+				t.Fail()
+			}
 		}
 	})
 	t.Run("Translating CSV File to Struct", func(t *testing.T) {

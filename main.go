@@ -371,6 +371,10 @@ func fieldTranslate(e *string) Entry {
 	components := strings.Split(*e, ",")
 	newEntry := &Entry{}
 
+	if len(components) < 9 {
+		return *newEntry
+	}
+
 	// location, street are less predictable...
 
 	// In order to display the information correctly, we're going to do some
@@ -489,6 +493,26 @@ func (x *x) Render() {
 
 }
 
+// Clean will filter garbage in raw CSV data.
+func (x *x) Clean() {
+	var cleaned string
+	for _, line := range strings.Split(x.RawCSV, "\n") {
+		if len(strings.Split(line, ",")) > 9 {
+
+			// I don't even know how this garbage ended up here...
+
+			line = strings.Replace(line, "\n", "", 0)
+			line = strings.Trim(line, string(rune(13)))
+			line = strings.Trim(line, string(rune(33)))
+			line = strings.Trim(line, string(rune(44)))
+
+			cleaned = cleaned + fmt.Sprintf("%v\n", line)
+		}
+	}
+
+	x.RawCSV = cleaned
+}
+
 // main is main, our programs starting point.
 func main() {
 
@@ -514,6 +538,7 @@ func main() {
 	covid.GetHTML(endpoint)
 	covid.GetCSVReference()
 	covid.GetCSVData()
+	covid.Clean()
 	covid.SetCSVData()
 
 	// validate input date requirements
