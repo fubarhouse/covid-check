@@ -33,6 +33,11 @@ var (
 	// There is no way to filter for nil value as the filter checks
 	// if the result contains the input.
 	contact string
+	// file provides a csv input which circumvents downloading a new
+	// set of data from the endpoint.
+	file string
+	// limit will limit the results to a specific number.
+	limit int
 	// location is the filter for the location field, and will check
 	// if the result contains the input information.
 	location string
@@ -381,8 +386,13 @@ func fieldTranslate(e *string) Entry {
 	// trickery with the input fields, which components will have a length of 10, 11 or 12
 	// depending on the edge-case. We should probably make this easier later...
 
-	datestring := strings.Split(trimQuotes(components[len(components)-4]), " ")[0]
-	t, _ := time.Parse("02/01/2006", datestring)
+	datestring := strings.Split(trimQuotes(components[len(components)-5]), " ")[0]
+	// So... we'll assume standard Australian date/time format.
+	t, err := time.Parse("02/01/2006", datestring)
+	if err != nil {
+		// Fallback to American convention, because... this is still a thing.
+		t, _ = time.Parse("2006/01/02", datestring)
+	}
 
 	newEntry = &Entry{
 		Status:        trimQuotes(components[1]),
@@ -402,21 +412,30 @@ func fieldTranslate(e *string) Entry {
 	case 10:
 		newEntry.ExposureLocation = trimQuotes(components[2])
 		newEntry.Street = trimQuotes(components[3])
+		newEntry.State = trimQuotes(components[len(components) - 5])
+		// todo... time conversion is failing here?
+		datestring = strings.Split(trimQuotes(components[6]), " ")[0]
+		t, _ = time.Parse("02/01/2021", strings.Trim(datestring, " "))
+		newEntry.Date = &t
 	case 11:
-		var location string
-		if trimQuotes(components[2]) != "" {
-			location = fmt.Sprintf("%s", trimQuotes(components[2]))
-		}
-		if trimQuotes(components[3]) != "" {
-			location = fmt.Sprintf("%s, %s", location, trimQuotes(components[3]))
-			newEntry.ExposureLocation = strings.Join([]string{location, trimQuotes(components[3])}, ", ")
-		}
-		newEntry.ExposureLocation = location
-		newEntry.Street = ""
+		newEntry.ExposureLocation = trimQuotes(components[2])
+		newEntry.Street = trimQuotes(components[3])
+		newEntry.ArrivalTime = trimQuotes(components[len(components)-4])
+		newEntry.DepartureTime = trimQuotes(components[len(components)-3])
+		newEntry.State = trimQuotes(components[len(components) - 6])
+		newEntry.Suburb = trimQuotes(components[len(components) - 7])
 	case 12:
 		newEntry.ExposureLocation = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
 		newEntry.ExposureLocation = strings.TrimLeft(newEntry.ExposureLocation, ", ")
 		newEntry.Street = ""
+		newEntry.Suburb = trimQuotes(components[len(components) - 7])
+		newEntry.State = trimQuotes(components[len(components) - 6])
+	case 13:
+		newEntry.ExposureLocation = ""
+		newEntry.Street = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
+		newEntry.Street = strings.TrimLeft(newEntry.Street, ", ")
+		newEntry.Suburb = trimQuotes(components[len(components) - 7])
+		newEntry.State = trimQuotes(components[len(components) - 6])
 	}
 
 	return *newEntry
@@ -466,7 +485,7 @@ func (x *x) Render() {
 	table.SetCaption(false, "COVID-19 Exposure Sites")
 	table.SetColWidth(width)
 
-	for _, item := range x.FilteredResults.Items {
+	for i, item := range x.FilteredResults.Items {
 
 		s := []string{
 			fmt.Sprintf("%d", item.FieldCount),
@@ -481,7 +500,11 @@ func (x *x) Render() {
 			item.Contact,
 		}
 
-		table.Append(s)
+		if limit != 0 && i <= limit {
+			table.Append(s)
+		} else if limit == 0 {
+			table.Append(s)
+		}
 	}
 
 	if len(x.FilteredResults.Items) == 0 {
@@ -517,6 +540,10 @@ func (x *x) Clean() {
 func main() {
 
 	// flags
+
+	//flag.StringVar(&file, "file", "", "relative path to csv file to use instead of new data.")
+	flag.IntVar(&limit, "limit", 0, "Limit how many results are shown.")
+
 	flag.StringVar(&endpoint, "endpoint", "https://www.covid19.act.gov.au/act-status-and-response/act-covid-19-exposure-locations", "endpoint of Canberra's covid exposure list")
 	flag.StringVar(&contact, "contact", "", "contact rating [|close|casual|monitor]")
 	flag.StringVar(&location, "location", "", "location")
@@ -535,9 +562,19 @@ func main() {
 	flag.Parse()
 
 	covid := &x{}
-	covid.GetHTML(endpoint)
-	covid.GetCSVReference()
-	covid.GetCSVData()
+
+	if file == "" {
+		covid.GetHTML(endpoint)
+		covid.GetCSVReference()
+		covid.GetCSVData()
+	} else {
+		content, err := ioutil.ReadFile(file)
+		if err != nil {
+			panic("could not read file")
+		}
+		covid.RawCSV = string(content)
+	}
+
 	covid.Clean()
 	covid.SetCSVData()
 
@@ -569,8 +606,10 @@ func main() {
 
 	// Render!
 	covid.Render()
-	if !rawOutput && len(covid.FilteredResults.Items) > 0 {
+	if !rawOutput && limit == 0 && len(covid.FilteredResults.Items) > 0 {
 		fmt.Printf("total items found: %d\n", len(covid.FilteredResults.Items))
 	}
-
+	if !rawOutput && limit != 0 && len(covid.FilteredResults.Items) > 0 {
+		fmt.Printf("displaying %d of %d total items found\n", limit, len(covid.FilteredResults.Items))
+	}
 }
