@@ -409,7 +409,7 @@ func fieldTranslate(e *string) Entry {
 	newEntry.FieldCount = len(components)
 
 	newEntry.State = trimQuotes(components[len(components) - 6])
-	newEntry.Suburb = trimQuotes(components[len(components) - 7])
+	newEntry.Suburb = trimQuotes(components[4])
 
 	// Handle edge-cases in data here:
 	// todo this needs to be better...
