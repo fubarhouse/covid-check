@@ -385,26 +385,31 @@ func fieldTranslate(e *string) Entry {
 	// In order to display the information correctly, we're going to do some
 	// trickery with the input fields, which components will have a length of 10, 11 or 12
 	// depending on the edge-case. We should probably make this easier later...
-
-	datestring := strings.Split(trimQuotes(components[len(components)-5]), " ")[0]
-	// So... we'll assume standard Australian date/time format.
-	t, err := time.Parse("02/01/2006", datestring)
-	if err != nil {
-		// Fallback to American convention, because... this is still a thing.
-		t, _ = time.Parse("2006/01/02", datestring)
+	date := time.Now()
+	for i, v := range components {
+		if ok, _ := regexp.MatchString("^[0-9][0-9]\\/[0-9][0-9]\\/[0-9][0-9][0-9][0-9].*$", v); ok {
+			datestring := strings.Split(trimQuotes(components[i]), " ")[0]
+			t, err := time.Parse("02/01/2006", strings.Trim(datestring, " "))
+			if err == nil {
+				date = t
+			}
+		}
 	}
 
 	newEntry = &Entry{
 		Status:        trimQuotes(components[1]),
 		Suburb:        trimQuotes(components[len(components)-6]),
 		State:         trimQuotes(components[len(components)-5]),
-		Date:          &t,
+		Date:          &date,
 		ArrivalTime:   trimQuotes(components[len(components)-3]),
 		DepartureTime: trimQuotes(components[len(components)-2]),
 		Contact:       trimQuotes(components[len(components)-1]),
 	}
 
 	newEntry.FieldCount = len(components)
+
+	newEntry.State = trimQuotes(components[len(components) - 6])
+	newEntry.Suburb = trimQuotes(components[len(components) - 7])
 
 	// Handle edge-cases in data here:
 	// todo this needs to be better...
@@ -413,29 +418,20 @@ func fieldTranslate(e *string) Entry {
 		newEntry.ExposureLocation = trimQuotes(components[2])
 		newEntry.Street = trimQuotes(components[3])
 		newEntry.State = trimQuotes(components[len(components) - 5])
-		// todo... time conversion is failing here?
-		datestring = strings.Split(trimQuotes(components[6]), " ")[0]
-		t, _ = time.Parse("02/01/2021", strings.Trim(datestring, " "))
-		newEntry.Date = &t
+		newEntry.Date = &date
 	case 11:
 		newEntry.ExposureLocation = trimQuotes(components[2])
 		newEntry.Street = trimQuotes(components[3])
 		newEntry.ArrivalTime = trimQuotes(components[len(components)-4])
 		newEntry.DepartureTime = trimQuotes(components[len(components)-3])
-		newEntry.State = trimQuotes(components[len(components) - 6])
-		newEntry.Suburb = trimQuotes(components[len(components) - 7])
 	case 12:
 		newEntry.ExposureLocation = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
 		newEntry.ExposureLocation = strings.TrimLeft(newEntry.ExposureLocation, ", ")
 		newEntry.Street = ""
-		newEntry.Suburb = trimQuotes(components[len(components) - 7])
-		newEntry.State = trimQuotes(components[len(components) - 6])
 	case 13:
 		newEntry.ExposureLocation = ""
 		newEntry.Street = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
 		newEntry.Street = strings.TrimLeft(newEntry.Street, ", ")
-		newEntry.Suburb = trimQuotes(components[len(components) - 7])
-		newEntry.State = trimQuotes(components[len(components) - 6])
 	}
 
 	return *newEntry
@@ -610,6 +606,10 @@ func main() {
 		fmt.Printf("total items found: %d\n", len(covid.FilteredResults.Items))
 	}
 	if !rawOutput && limit != 0 && len(covid.FilteredResults.Items) > 0 {
-		fmt.Printf("displaying %d of %d total items found\n", limit, len(covid.FilteredResults.Items))
+		count := limit
+		if count > len(covid.FilteredResults.Items) {
+			count = len(covid.FilteredResults.Items)
+		}
+		fmt.Printf("displaying %d of %d total items found\n", count, len(covid.FilteredResults.Items))
 	}
 }
