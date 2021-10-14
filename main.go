@@ -122,9 +122,9 @@ type (
 		// Date is a valid *time.Time entry used for querying or presenting.
 		Date *time.Time
 		// Arrival time is the exposure start time represented as a string.
-		ArrivalTime string
+		ArrivalTime *time.Time
 		// Arrival time is the exposure finish time represented as a string.
-		DepartureTime string
+		DepartureTime *time.Time
 		// Contact is the contact category - either Close, Casual or Monitor.
 		Contact string
 	}
@@ -143,7 +143,7 @@ func (entries *Entries) Add(entry Entry) {
 // return unaltered.
 func trimQuotes(in string) (out string) {
 	if strings.Contains(in, "\"") {
-		return strings.Split(in, "\"")[1]
+		return strings.Trim(strings.Split(in, "\"")[1], " ")
 	}
 	return in
 }
@@ -308,12 +308,12 @@ func (x *x) Query(e *Entry, params QueryParams) {
 				}
 			}
 		}
-		if e.ArrivalTime != "" {
+		if e.ArrivalTime != nil {
 			if b := check(e.ArrivalTime, dataEntry.ArrivalTime, &mq); b {
 				match = true
 			}
 		}
-		if e.DepartureTime != "" {
+		if e.DepartureTime != nil {
 			if b := check(e.DepartureTime, dataEntry.DepartureTime, &mq); b {
 				match = true
 			}
@@ -386,53 +386,96 @@ func fieldTranslate(e *string) Entry {
 	// trickery with the input fields, which components will have a length of 10, 11 or 12
 	// depending on the edge-case. We should probably make this easier later...
 	date := time.Now()
+	Status := ""
+	Contact := ""
+	State := ""
+	TimeStart := time.Time{}
+	TimeEnd := time.Time{}
+	Suburb := ""
+	Street := ""
+	Location := ""
 	for i, v := range components {
+		// Dynamic discovery of Date
+		datestring := strings.Split(trimQuotes(components[i]), " ")[0]
 		if ok, _ := regexp.MatchString("^[0-9][0-9]\\/[0-9][0-9]\\/[0-9][0-9][0-9][0-9].*$", v); ok {
-			datestring := strings.Split(trimQuotes(components[i]), " ")[0]
 			t, err := time.Parse("02/01/2006", strings.Trim(datestring, " "))
 			if err == nil {
 				date = t
 			}
 		}
+
+		fieldData := trimQuotes(v)
+
+		// Dynamic discovery of Status
+		if ok, _ := regexp.MatchString("^(New||Updated||Archived)$", fieldData); ok {
+			if Status == "" {
+				Status = fieldData
+				continue
+			}
+		}
+		// Dynamic discovery of Contact
+		if ok, _ := regexp.MatchString("^(Close||Casual||Monitor)$", fieldData); ok {
+			if Contact == "" {
+				Contact = fieldData
+				continue
+			}
+		}
+		if ok, _ := regexp.MatchString("^(ACT||NSW||VIC||TAS||SA||WA||NT||QLD)$", fieldData); ok {
+			if State == "" {
+				State = fieldData
+				continue
+			}
+		}
+		if ok, _ := regexp.MatchString("^[A-Z][a-z]+$", fieldData); ok {
+			if Suburb == "" {
+				Suburb = fieldData
+				continue
+			}
+		} else if fieldData == "Public Transport" {
+			Suburb = fieldData
+			continue
+		}
+		if ok, _ := regexp.MatchString("^[0-9][0-9](:)[0-9][0-9](am||pm)$", fieldData); ok {
+			fieldData = strings.Replace(fieldData, "am", "AM", -1)
+			fieldData = strings.Replace(fieldData, "pm", "PM", -1)
+			timeT, _ := time.Parse(time.Kitchen, fieldData)
+			if TimeStart.IsZero() {
+				TimeStart = timeT
+				continue
+			} else {
+				TimeEnd = timeT
+				continue
+			}
+		}
+
+		if ok, _ := regexp.MatchString("^([A-Z]||[0-9]).*[a-z].*$", fieldData); ok {
+			if Location == "" {
+				Location = fieldData
+				continue
+			}
+		}
+		if ok, _ := regexp.MatchString("^([0-9-\\/]+\\ [A-Z][a-z].*||[A-Z][a-z].*)$", fieldData); ok {
+			if Street == "" {
+				Street = fieldData
+				continue
+			}
+		}
 	}
 
 	newEntry = &Entry{
-		Status:        trimQuotes(components[1]),
-		Suburb:        trimQuotes(components[len(components)-6]),
-		State:         trimQuotes(components[len(components)-5]),
-		Date:          &date,
-		ArrivalTime:   trimQuotes(components[len(components)-3]),
-		DepartureTime: trimQuotes(components[len(components)-2]),
-		Contact:       trimQuotes(components[len(components)-1]),
+		FieldCount:       len(components),
+		Status:           Status,
+		ExposureLocation: Location,
+		Street:           Street,
+		Suburb:           Suburb,
+		State:            State,
+		Date:             &date,
+		ArrivalTime:      &TimeStart,
+		DepartureTime:    &TimeEnd,
+		Contact:          Contact,
 	}
 
-	newEntry.FieldCount = len(components)
-
-	newEntry.State = trimQuotes(components[len(components) - 6])
-	newEntry.Suburb = trimQuotes(components[4])
-
-	// Handle edge-cases in data here:
-	// todo this needs to be better...
-	switch newEntry.FieldCount {
-	case 10:
-		newEntry.ExposureLocation = trimQuotes(components[2])
-		newEntry.Street = trimQuotes(components[3])
-		newEntry.State = trimQuotes(components[len(components) - 5])
-		newEntry.Date = &date
-	case 11:
-		newEntry.ExposureLocation = trimQuotes(components[2])
-		newEntry.Street = trimQuotes(components[3])
-		newEntry.ArrivalTime = trimQuotes(components[len(components)-4])
-		newEntry.DepartureTime = trimQuotes(components[len(components)-3])
-	case 12:
-		newEntry.ExposureLocation = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
-		newEntry.ExposureLocation = strings.TrimLeft(newEntry.ExposureLocation, ", ")
-		newEntry.Street = ""
-	case 13:
-		newEntry.ExposureLocation = ""
-		newEntry.Street = strings.Join([]string{trimQuotes(components[3]), trimQuotes(components[2]), trimQuotes(components[4])}, ", ")
-		newEntry.Street = strings.TrimLeft(newEntry.Street, ", ")
-	}
+	//fmt.Println(newEntry)
 
 	return *newEntry
 
@@ -491,8 +534,8 @@ func (x *x) Render() {
 			item.Suburb,
 			item.State,
 			fmt.Sprintf("%d-%d-%d", item.Date.Day(), item.Date.Month(), item.Date.Year()),
-			item.ArrivalTime,
-			item.DepartureTime,
+			item.ArrivalTime.Format(time.Kitchen),
+			item.DepartureTime.Format(time.Kitchen),
 			item.Contact,
 		}
 
@@ -593,8 +636,8 @@ func main() {
 		Suburb:           suburb,
 		State:            state,
 		Date:             t,
-		ArrivalTime:      atime,
-		DepartureTime:    dtime,
+		//ArrivalTime:      atime,
+		//DepartureTime:    dtime,
 		Contact:          contact,
 	}, QueryParams{
 		PrintRAWCSV: rawOutput,
