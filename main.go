@@ -389,8 +389,8 @@ func fieldTranslate(e *string) Entry {
 	Status := ""
 	Contact := ""
 	State := ""
-	TimeStart := time.Time{}
-	TimeEnd := time.Time{}
+	TimeStart := &time.Time{}
+	TimeEnd := &time.Time{}
 	Suburb := ""
 	Street := ""
 	Location := ""
@@ -435,16 +435,23 @@ func fieldTranslate(e *string) Entry {
 			Suburb = fieldData
 			continue
 		}
-		if ok, _ := regexp.MatchString("^[0-9][0-9](:)[0-9][0-9](am||pm)$", fieldData); ok {
+		if ok, _ := regexp.MatchString("^[0-9]+(:)[0-9]+(am||pm)$", fieldData); ok {
+
+			// Start Time is expected to precede End Time directly, so we make sure they're
+			// paired up to identify the pair of values.
+
 			fieldData = strings.Replace(fieldData, "am", "AM", -1)
 			fieldData = strings.Replace(fieldData, "pm", "PM", -1)
-			timeT, _ := time.Parse(time.Kitchen, fieldData)
-			if TimeStart.IsZero() {
-				TimeStart = timeT
-				continue
-			} else {
-				TimeEnd = timeT
-				continue
+			timeOne, eOne := time.Parse(time.Kitchen, fieldData)
+
+			adjacentFieldData := trimQuotes(components[i+1])
+			adjacentFieldData = strings.Replace(adjacentFieldData, "am", "AM", -1)
+			adjacentFieldData = strings.Replace(adjacentFieldData, "pm", "PM", -1)
+			timeTwo, eTwo := time.Parse(time.Kitchen, adjacentFieldData)
+
+			if eOne == nil && eTwo == nil {
+				TimeStart = &timeOne
+				TimeEnd = &timeTwo
 			}
 		}
 
@@ -470,12 +477,10 @@ func fieldTranslate(e *string) Entry {
 		Suburb:           Suburb,
 		State:            State,
 		Date:             &date,
-		ArrivalTime:      &TimeStart,
-		DepartureTime:    &TimeEnd,
+		ArrivalTime:      TimeStart,
+		DepartureTime:    TimeEnd,
 		Contact:          Contact,
 	}
-
-	//fmt.Println(newEntry)
 
 	return *newEntry
 
