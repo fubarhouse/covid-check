@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,9 +21,6 @@ var (
 	// rawOutput tells the app to print the raw csv data instead of
 	// rendering a table.
 	rawOutput = true
-	// fieldCount is a debugging variable which will filter results
-	// by the count of the fields in the row of the RawCSV line item.
-	fieldCount int
 	// endpoint is the URL/endpoint which contains the exposure sites.
 	// notably, this is only compatible with the Canberra website.
 	// other examples using a similar convention would need to be
@@ -105,8 +103,6 @@ type (
 	// Entry is a stuct which represents the data to be displayed.
 	Entry struct {
 		//SHA256 			 sha256.sum224 // todo
-		// FieldCount is the amount of fields in the row of the raw CSV Entry
-		FieldCount int
 		// Status is the status of the Entry - either New, Updated, Archived,
 		// or without a value - nil.
 		Status string
@@ -129,6 +125,25 @@ type (
 		Contact string
 	}
 )
+
+func (e *Entries) Len() int {
+	return len(e.Items)
+}
+
+func (e *Entries) Less(i, j int) bool {
+	//	sort.Sort(students)
+	//	fmt.Println(sort.IsSorted(students))
+	//	sort.Sort(sort.Reverse(students))
+	// https://gist.github.com/dnutiu/a899e48c95ff80fe98bada566e03251e
+
+	// Work out if the full start date comes before another
+
+	return e.Items[i].Date.After(*e.Items[j].Date)
+}
+
+func (e *Entries) Swap(i, j int) {
+	e.Items[i], e.Items[j] = e.Items[j], e.Items[i]
+}
 
 // Add will add an Entry into the Entries - can be applied to RawResults
 // or RawFilteredResults, depending on where in the application.
@@ -222,11 +237,6 @@ func check(a, b interface{}, mq *MultiQueries) bool {
 		return false
 	}
 	switch v := a.(type) {
-	case int:
-		// Here, our only option is FieldCount, so comparing against full value is best.
-		if a.(int) == b.(int) {
-			found = true
-		}
 	case string:
 		// Note: time is also handled via string.
 		if strings.Contains(strings.ToLower(b.(string)), strings.ToLower(a.(string))) {
@@ -269,11 +279,6 @@ func (x *x) Query(e *Entry, params QueryParams) {
 		mq := MultiQueries{}
 		match := true
 
-		if e.FieldCount != 0 {
-			if b := check(e.FieldCount, dataEntry.FieldCount, &mq); b {
-				match = true
-			}
-		}
 		if e.Status != "" {
 			if b := check(e.Status, dataEntry.Status, &mq); b {
 				match = true
@@ -340,7 +345,7 @@ func (x *x) Query(e *Entry, params QueryParams) {
 		}
 
 		if match && params.PrintRAWCSV {
-			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.FieldCount, dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, dataEntry.Date, dataEntry.ArrivalTime, dataEntry.DepartureTime, dataEntry.Contact)
+			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, fmt.Sprintf("%v/%v/%v",dataEntry.Date.Day(), int(dataEntry.Date.Month()), dataEntry.Date.Year()), dataEntry.ArrivalTime.Format(time.Kitchen), dataEntry.DepartureTime.Format(time.Kitchen), dataEntry.Contact)
 		}
 	}
 }
@@ -470,7 +475,6 @@ func fieldTranslate(e *string) Entry {
 	}
 
 	newEntry = &Entry{
-		FieldCount:       len(components),
 		Status:           Status,
 		ExposureLocation: Location,
 		Street:           Street,
@@ -495,12 +499,8 @@ func (x *x) SetCSVData() {
 		x.AddFiltered(&newEntry)
 	}
 
-	// todo: sort by date
-	//for i, dataEntry := range x.FilteredResults.Items {
-	//	sort.Slice(x.FilteredResults.Items, func(i, j int) bool {
-	//		return x.FilteredResults.Items[i].Date > products[j].Price
-	//	})
-	//}
+	// Sorting is implemented but not working.
+	sort.Sort(&x.FilteredResults)
 }
 
 // AddFiltered will check if the input has a suburb associated to it and
@@ -525,22 +525,21 @@ func (x *x) AddRaw(e *Entry) {
 func (x *x) Render() {
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"", "Status", "Location", "Street", "Suburb", "State", "Date", "Start Time", "Finish Time", "Contact"})
+	table.SetHeader([]string{"Status", "Location", "Street", "Suburb", "State", "Date/Time", "Contact"})
 	table.SetCaption(false, "COVID-19 Exposure Sites")
 	table.SetColWidth(width)
 
 	for i, item := range x.FilteredResults.Items {
 
+		d := fmt.Sprintf("%d-%d-%d", item.Date.Day(), item.Date.Month(), item.Date.Year())
+
 		s := []string{
-			fmt.Sprintf("%d", item.FieldCount),
 			item.Status,
 			item.ExposureLocation,
 			item.Street,
 			item.Suburb,
 			item.State,
-			fmt.Sprintf("%d-%d-%d", item.Date.Day(), item.Date.Month(), item.Date.Year()),
-			item.ArrivalTime.Format(time.Kitchen),
-			item.DepartureTime.Format(time.Kitchen),
+			fmt.Sprintf("%v %v - %v", d, item.ArrivalTime.Format(time.Kitchen), item.DepartureTime.Format(time.Kitchen)),
 			item.Contact,
 		}
 
@@ -551,8 +550,10 @@ func (x *x) Render() {
 		}
 	}
 
-	if len(x.FilteredResults.Items) == 0 {
+	if !rawOutput && len(x.FilteredResults.Items) == 0 {
 		fmt.Println("no results found")
+		return
+	} else if rawOutput {
 		return
 	}
 
@@ -585,7 +586,7 @@ func main() {
 
 	// flags
 
-	//flag.StringVar(&file, "file", "", "relative path to csv file to use instead of new data.")
+	flag.StringVar(&file, "file", "", "relative path to csv file to use instead of new data.")
 	flag.IntVar(&limit, "limit", 0, "Limit how many results are shown.")
 
 	flag.StringVar(&endpoint, "endpoint", "https://www.covid19.act.gov.au/act-status-and-response/act-covid-19-exposure-locations", "endpoint of Canberra's covid exposure list")
@@ -602,7 +603,6 @@ func main() {
 	flag.StringVar(&query, "q", "", "arbitrary query")
 	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
 	flag.IntVar(&width, "width", 50, "width of table columns")
-	flag.IntVar(&fieldCount, "field-count", 0, "count of fields in row")
 	flag.Parse()
 
 	covid := &x{}
@@ -634,7 +634,6 @@ func main() {
 	}
 
 	covid.Query(&Entry{
-		FieldCount:       fieldCount,
 		Status:           status,
 		ExposureLocation: location,
 		Street:           street,
