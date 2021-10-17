@@ -345,7 +345,8 @@ func (x *x) Query(e *Entry, params QueryParams) {
 		}
 
 		if match && params.PrintRAWCSV {
-			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, fmt.Sprintf("%v/%v/%v",dataEntry.Date.Day(), int(dataEntry.Date.Month()), dataEntry.Date.Year()), dataEntry.ArrivalTime.Format(time.Kitchen), dataEntry.DepartureTime.Format(time.Kitchen), dataEntry.Contact)
+
+			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, fmt.Sprintf("%02d/%v/%v - %v",dataEntry.Date.Day(), int(dataEntry.Date.Month()), dataEntry.Date.Year(), dataEntry.Date.Weekday()), dataEntry.ArrivalTime.Format(time.Kitchen), dataEntry.DepartureTime.Format(time.Kitchen), dataEntry.Contact)
 		}
 	}
 }
@@ -402,8 +403,8 @@ func fieldTranslate(e *string) Entry {
 	for i, v := range components {
 		// Dynamic discovery of Date
 		datestring := strings.Split(trimQuotes(components[i]), " ")[0]
-		if ok, _ := regexp.MatchString("^[0-9][0-9]\\/[0-9][0-9]\\/[0-9][0-9][0-9][0-9].*$", v); ok {
-			t, err := time.Parse("02/01/2006", strings.Trim(datestring, " "))
+		if ok, _ := regexp.MatchString("^.*[0-9]+\\/[0-9]+\\/[0-9][0-9]+.*$", v); ok {
+			t, err := time.Parse("2/1/2006", strings.Trim(datestring, " "))
 			if err == nil {
 				date = t
 			}
@@ -440,7 +441,7 @@ func fieldTranslate(e *string) Entry {
 			Suburb = fieldData
 			continue
 		}
-		if ok, _ := regexp.MatchString("^[0-9]+(:)[0-9]+(am||pm)$", fieldData); ok {
+		if ok, _ := regexp.MatchString("^[0-9]+(:)[0-9]+(am||pm||AM||PM)$", fieldData); ok {
 
 			// Start Time is expected to precede End Time directly, so we make sure they're
 			// paired up to identify the pair of values.
@@ -564,6 +565,7 @@ func (x *x) Render() {
 // Clean will filter garbage in raw CSV data.
 func (x *x) Clean() {
 	var cleaned string
+
 	for _, line := range strings.Split(x.RawCSV, "\n") {
 		if len(strings.Split(line, ",")) > 9 {
 
@@ -578,7 +580,9 @@ func (x *x) Clean() {
 		}
 	}
 
-	x.RawCSV = cleaned
+	if len(cleaned) != 0 {
+		x.RawCSV = cleaned
+	}
 }
 
 // main is main, our programs starting point.

@@ -70,15 +70,12 @@ func TestDataLengthDynamic(t *testing.T) {
 
 		covid.Query(&Entry{
 			ExposureLocation: "7-Eleven Holt",
-			FieldCount:       10,
 			Date:             &timeFilter,
-			ArrivalTime:      "8:30pm",
-			DepartureTime:    "9:00pm",
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
 
-		if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 10  {
+		if len(covid.FilteredResults.Items) > 0 {
 			result = true
 
 		}
@@ -92,15 +89,12 @@ func TestDataLengthDynamic(t *testing.T) {
 		timeFilter, _ := time.Parse("02/01/2006", "04/10/2021")
 		covid.Query(&Entry{
 			ExposureLocation: "ALDI Belconnen",
-			FieldCount:       11,
 			Date:             &timeFilter,
-			ArrivalTime:      "12:45pm",
-			DepartureTime:    "1:45pm",
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
 
-		if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 11 {
+		if len(covid.FilteredResults.Items) > 0 {
 			result = true
 
 		}
@@ -111,17 +105,15 @@ func TestDataLengthDynamic(t *testing.T) {
 
 	t.Run("Running query 3/3", func(t *testing.T) {
 		result := false
+		timeFilter, _ := time.Parse("02/01/2006", "09/10/2021")
 		covid.Query(&Entry{
-			ExposureLocation: "Kaleen Plaza Pharmacy",
-			FieldCount:       12,
-			Date:             &time.Time{},
-			ArrivalTime:      "6:15pm",
-			DepartureTime:    "7:10pm",
+			ExposureLocation: "Coles Kaleen",
+			Date:            &timeFilter,
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
 
-		if len(covid.FilteredResults.Items) == 1 && covid.FilteredResults.Items[0].FieldCount == 12 {
+		if len(covid.FilteredResults.Items) > 0 {
 			result = true
 
 		}
@@ -219,10 +211,6 @@ func TestData(t *testing.T) {
 		for _, item := range covid.FilteredResults.Items {
 			// Is row item nil?
 			if fmt.Sprint(&Entry{}) == fmt.Sprint(item) {
-				t.Fail()
-			}
-			// Do the field counts match expected values?
-			if item.FieldCount != 10 && item.FieldCount != 11 && item.FieldCount != 12 {
 				t.Fail()
 			}
 		}
