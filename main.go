@@ -26,6 +26,10 @@ var (
 	// other examples using a similar convention would need to be
 	// identified to be compatible.
 	endpoint string
+	// generate will fetch a known copy of the original source dataset.
+	// this will be useful for running the application after covid is
+	// no longer a thing, because this data won't exist forever.
+	generate bool
 	// contact is the filter for the contact fiels, notably it will
 	// only return results when set to "casual", "monitor" or "close".
 	// There is no way to filter for nil value as the filter checks
@@ -71,6 +75,11 @@ var (
 	width int
 	// query is an arbitrary, non-specific query
 	query string
+	// SampleEndpointURL is a reference to a mirror of an official data
+	// file from official sources during the pandemic which will allow
+	// this tool to be used against a source, and for tests to be run
+	// against a predictable dataset.
+	SampleEndpointURL = "https://gist.githubusercontent.com/fubarhouse/a827e4db69590556a3bf795ab1f93c89/raw/b536c5d534734da3c7484d9e1db8fe7ba56d7af5/sample-dataset-covidcheck.md"
 )
 
 type (
@@ -585,6 +594,14 @@ func (x *x) Clean() {
 	}
 }
 
+func generateData() *x {
+	c := &x{}
+	c.DataEndpoint = SampleEndpointURL
+	c.GetCSVData()
+	c.SetCSVData()
+	return c
+}
+
 // main is main, our programs starting point.
 func main() {
 
@@ -607,7 +624,16 @@ func main() {
 	flag.StringVar(&query, "q", "", "arbitrary query")
 	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
 	flag.IntVar(&width, "width", 50, "width of table columns")
+
+	flag.BoolVar(&rawOutput, "generate", false, "download a mirror of a source dataset to stdout")
+
 	flag.Parse()
+
+	if generate {
+		c := generateData()
+		fmt.Println(c.RawCSV)
+		os.Exit(0)
+	}
 
 	covid := &x{}
 

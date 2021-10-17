@@ -63,7 +63,10 @@ func TestDataLengthDynamic(t *testing.T) {
 			}
 		}
 	})
+}
 
+func TestQueryResults(t *testing.T) {
+	covid := generateData()
 	t.Run("Running query 1/3", func(t *testing.T) {
 		result := false
 		timeFilter, _ := time.Parse("02/01/2006", "28/09/2021")
@@ -79,6 +82,7 @@ func TestDataLengthDynamic(t *testing.T) {
 			result = true
 
 		}
+
 		if !result {
 			t.Fail()
 		}
