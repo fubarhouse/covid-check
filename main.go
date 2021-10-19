@@ -553,7 +553,7 @@ func (x *x) Render() {
 			item.Contact,
 		}
 
-		if limit != 0 && i <= limit {
+		if limit != 0 && i < limit {
 			table.Append(s)
 		} else if limit == 0 {
 			table.Append(s)
