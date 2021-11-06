@@ -75,6 +75,8 @@ var (
 	width int
 	// query is an arbitrary, non-specific query
 	query string
+	// queryNot is an arbitrary, non-specific query to not include an item.
+	queryNot string
 	// SampleEndpointURL is a reference to a mirror of an official data
 	// file from official sources during the pandemic which will allow
 	// this tool to be used against a source, and for tests to be run
@@ -254,10 +256,6 @@ func check(a, b interface{}, mq *MultiQueries) bool {
 		if c, _ := regexp.Match(strings.ToLower(a.(string)), []byte(strings.ToLower(b.(string)))); c {
 			found = true
 		}
-		// If the dates are queried, we check for absolute equality.
-		if a == b {
-			found = true
-		}
 		// nil checks for strings.
 		if strings.ToLower(a.(string)) == "nil" && strings.ToLower(b.(string)) == "" {
 			found = true
@@ -273,6 +271,40 @@ func check(a, b interface{}, mq *MultiQueries) bool {
 
 	mq.Items = append(mq.Items, false)
 	return false
+}
+
+// checkNot will provide field validation, and will add the result to a
+// *MultiQueries if the validation passes. This will later be checked
+// before being added to the filtered results in Query.
+func checkNot(a, b interface{}, mq *MultiQueries) bool {
+	found := true
+	if a == nil {
+		return false
+	}
+	switch v := a.(type) {
+	case string:
+		// Note: time is also handled via string.
+		if !strings.Contains(strings.ToLower(b.(string)), strings.ToLower(a.(string))) {
+			found = false
+		}
+		if c, _ := regexp.Match(strings.ToLower(a.(string)), []byte(strings.ToLower(b.(string)))); !c {
+			found = false
+		}
+		// nil checks for strings.
+		if strings.ToLower(a.(string)) == "nil" && strings.ToLower(b.(string)) == "" {
+			found = false
+		}
+	default:
+		fmt.Printf("no handler for %v was found\n", v)
+	}
+
+	if !found {
+		mq.Items = append(mq.Items, true)
+		return false
+	}
+
+	mq.Items = append(mq.Items, false)
+	return true
 }
 
 // Query will clear out the FilteredResults field and repopulate it by querying
@@ -339,6 +371,13 @@ func (x *x) Query(e *Entry, params QueryParams) {
 		}
 		if query != "" {
 			if b := check(query, fmt.Sprint(dataEntry), &mq); b {
+				match = true
+			}
+		}
+		if queryNot != "" {
+			if b := checkNot(queryNot, fmt.Sprint(dataEntry), &mq); b {
+				match = false
+			} else {
 				match = true
 			}
 		}
@@ -622,6 +661,7 @@ func main() {
 	flag.StringVar(&dtime, "end-time", "", "end time")
 	flag.StringVar(&query, "query", "", "arbitrary query")
 	flag.StringVar(&query, "q", "", "arbitrary query")
+	flag.StringVar(&queryNot, "qn", "", "arbitrary query reversed (not)")
 	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
 	flag.IntVar(&width, "width", 50, "width of table columns")
 
