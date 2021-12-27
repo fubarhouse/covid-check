@@ -142,7 +142,6 @@ type (
 	negativeQueries []string
 	// positiveQueries are the input queries to include.
 	positiveQueries []string
-
 )
 
 func (i *negativeQueries) String() string {
@@ -266,7 +265,7 @@ func (x *x) GetCSVReference() error {
 }
 
 // check will provide field validation, and will add the result to a
-// *MultiQueries if the validation passes. This will later be checkedn
+// *MultiQueries if the validation passes. This will later be checked
 // before being added to the filtered results in Query.
 func check(a, b interface{}, mq *MultiQueries) bool {
 	found := false
@@ -428,7 +427,7 @@ func (x *x) Query(e *Entry, params QueryParams) {
 
 		if match && params.PrintRAWCSV {
 
-			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, fmt.Sprintf("%02d/%v/%v - %v",dataEntry.Date.Day(), int(dataEntry.Date.Month()), dataEntry.Date.Year(), dataEntry.Date.Weekday()), dataEntry.ArrivalTime.Format(time.Kitchen), dataEntry.DepartureTime.Format(time.Kitchen), dataEntry.Contact)
+			fmt.Printf("\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\",\"%v\"\n", dataEntry.Status, dataEntry.ExposureLocation, dataEntry.Street, dataEntry.Suburb, dataEntry.State, fmt.Sprintf("%02d/%v/%v - %v", dataEntry.Date.Day(), int(dataEntry.Date.Month()), dataEntry.Date.Year(), dataEntry.Date.Weekday()), dataEntry.ArrivalTime.Format(time.Kitchen), dataEntry.DepartureTime.Format(time.Kitchen), dataEntry.Contact)
 		}
 	}
 }
@@ -747,7 +746,7 @@ func main() {
 		Date:             t,
 		//ArrivalTime:      atime,
 		//DepartureTime:    dtime,
-		Contact:          contact,
+		Contact: contact,
 	}, QueryParams{
 		PrintRAWCSV: rawOutput,
 	})

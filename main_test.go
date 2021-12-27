@@ -112,7 +112,7 @@ func TestQueryResults(t *testing.T) {
 		timeFilter, _ := time.Parse("02/01/2006", "09/10/2021")
 		covid.Query(&Entry{
 			ExposureLocation: "Coles Kaleen",
-			Date:            &timeFilter,
+			Date:             &timeFilter,
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
