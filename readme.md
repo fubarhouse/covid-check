@@ -27,25 +27,26 @@ covid-check [flags]
 
 ### Flags
 
-| Name        | Example                 | Description                                                         |
-|-------------|-------------------------|---------------------------------------------------------------------|
-| Contact     | `-contact new`          | search string for contact field                                     |
-| Date        | `-date 01/07/2021`      | search string for date field - must be in the format `DD/MM/YYYY`   |
-| End Time    | `-end-time 5:00pm`      | search string for departure time - represented as a string          |
-| Endpoint    | `-endpoint https://...` | url of ACT government website page with data to scrape              |
-| File        | `-file data.csv`        | Provide a file as a data source                                     |
-| Generate    | `-generate`             | Download an official dataset from a mirror and print to stdout      |
-| Limit       | `-limit`                | Specify a maximum quantity of items to show.                        |
-| Location    | `-location Coles`       | search string of location field                                     |
-| Query       | `--query phillip`       | An arbitrary query - find anything matching input (including regex) |
-| Query       | `--q phillip`           | An arbitrary query - find anything matching input (including regex) |
-| Raw         | `-raw`                  | Performs all search functionality but displays as csv output.       |
-| Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string            |
-| State       | `-state ACT`            | search string of state field                                        |
-| Status      | `-status new`           | search string of status field                                       |
-| Street      | `-street Hibberson`     | search string of street field                                       |
-| Suburb      | `-suburb woden`         | search string of suburb field                                       |
-| Width       | `-width 50`             | with of table columns, change to make the table wider               |
+| Name        | Example                 | Description                                                                                   |
+|-------------|-------------------------|-----------------------------------------------------------------------------------------------|
+| Contact     | `-contact new`          | search string for contact field                                                               |
+| Date        | `-date 01/07/2021`      | search string for date field - must be in the format `DD/MM/YYYY`                             |
+| End Time    | `-end-time 5:00pm`      | search string for departure time - represented as a string                                    |
+| Endpoint    | `-endpoint https://...` | url of ACT government website page with data to scrape                                        |
+| File        | `-file data.csv`        | Provide a file as a data source                                                               |
+| Generate    | `-generate`             | Download an official dataset from a mirror and print to stdout                                |
+| Limit       | `-limit`                | Specify a maximum quantity of items to show.                                                  |
+| Location    | `-location Coles`       | search string of location field                                                               |
+| Query       | `--query phillip`       | An arbitrary query - find anything matching input (including regex & multiple values)         |
+| Query       | `--query-not phillip`   | An arbitrary query - exclude find anything matching input (including regex & multiple values) |
+| Query       | `--q phillip`           | An arbitrary query - find anything matching input (including regex)                           |
+| Raw         | `-raw`                  | Performs all search functionality but displays as csv output.                                 |
+| Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string                                      |
+| State       | `-state ACT`            | search string of state field                                                                  |
+| Status      | `-status new`           | search string of status field                                                                 |
+| Street      | `-street Hibberson`     | search string of street field                                                                 |
+| Suburb      | `-suburb woden`         | search string of suburb field                                                                 |
+| Width       | `-width 50`             | with of table columns, change to make the table wider                                         |
 
 ### Example(s)
 
@@ -78,6 +79,14 @@ $ covid-check -file 20211019.csv -location westfield
 | Archived | Westfield Belconnen | Westfield Belconnen | Belconnen | ACT   | 23-9-2021 2:20PM - 3:30PM   | Monitor |
 +----------+---------------------+---------------------+-----------+-------+-----------------------------+---------+
 total items found: 3
+
+$ covid-check -file 20211227.csv -q canberra -q lyneham -qn next -q old
++----------+----------------------+------------------+---------+-------+----------------------------+---------+
+|  STATUS  |       LOCATION       |      STREET      | SUBURB  | STATE |         DATE/TIME          | CONTACT |
++----------+----------------------+------------------+---------+-------+----------------------------+---------+
+| Archived | The Old Canberra Inn | 195 Mouat Street | Lyneham | ACT   | 11-12-2021 6:00PM - 7:00PM | Casual  |
++----------+----------------------+------------------+---------+-------+----------------------------+---------+
+total items found: 1
 ```
 
 ## License
