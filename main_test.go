@@ -74,6 +74,7 @@ func TestQueryResults(t *testing.T) {
 		covid.Query(&Entry{
 			ExposureLocation: "7-Eleven Holt",
 			Date:             &timeFilter,
+			Suburb:           "Holt",
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
@@ -94,6 +95,7 @@ func TestQueryResults(t *testing.T) {
 		covid.Query(&Entry{
 			ExposureLocation: "ALDI Belconnen",
 			Date:             &timeFilter,
+			Suburb:           "Belconnen",
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
@@ -113,6 +115,7 @@ func TestQueryResults(t *testing.T) {
 		covid.Query(&Entry{
 			ExposureLocation: "Coles Kaleen",
 			Date:             &timeFilter,
+			Suburb:           "Kaleen",
 		}, QueryParams{
 			PrintRAWCSV: false,
 		})
