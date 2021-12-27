@@ -73,10 +73,6 @@ var (
 	dtime string
 	// width is the width of the table column, should you be so inclined.
 	width int
-	// query is an arbitrary, non-specific query
-	query string
-	// queryNot is an arbitrary, non-specific query to not include an item.
-	queryNot []string
 	// SampleEndpointURL is a reference to a mirror of an official data
 	// file from official sources during the pandemic which will allow
 	// this tool to be used against a source, and for tests to be run
@@ -150,7 +146,7 @@ type (
 )
 
 func (i *negativeQueries) String() string {
-	return strings.Join(*i, ",")
+	return strings.Join(*i, "|")
 }
 
 func (i *negativeQueries) Set(value string) error {
@@ -159,7 +155,7 @@ func (i *negativeQueries) Set(value string) error {
 }
 
 func (i *positiveQueries) String() string {
-	return strings.Join(*i, ",")
+	return strings.Join(*i, "|")
 }
 
 func (i *positiveQueries) Set(value string) error {
@@ -399,15 +395,19 @@ func (x *x) Query(e *Entry, params QueryParams) {
 				match = true
 			}
 		}
-		if query != "" {
-			if b := check(query, fmt.Sprint(dataEntry), &mq); b {
-				match = true
+
+		if len(PositiveQueries) != 0 {
+			for _, q := range PositiveQueries {
+				if b := check(q, fmt.Sprint(dataEntry), &mq); b {
+					match = true
+				} else {
+					match = false
+				}
 			}
 		}
 
 		if len(NegativeQueries) != 0 {
 			for _, q := range NegativeQueries {
-				fmt.Println(q, dataEntry)
 				if b := checkNot(q, fmt.Sprint(dataEntry), &mq); !b {
 					match = true
 				} else {
@@ -693,7 +693,8 @@ func main() {
 	flag.StringVar(&udate, "date", "", "date (formatted strictly as DD/MM/YYYY)")
 	flag.StringVar(&atime, "start-time", "", "start time")
 	flag.StringVar(&dtime, "end-time", "", "end time")
-	flag.StringVar(&query, "query", "", "arbitrary query")
+	flag.Var(&PositiveQueries, "query", "arbitrary query")
+	flag.Var(&NegativeQueries, "query-not", "arbitrary query reversed (not)")
 	flag.Var(&PositiveQueries, "q", "arbitrary query")
 	flag.Var(&NegativeQueries, "qn", "arbitrary query reversed (not)")
 	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
