@@ -76,12 +76,18 @@ var (
 	// query is an arbitrary, non-specific query
 	query string
 	// queryNot is an arbitrary, non-specific query to not include an item.
-	queryNot string
+	queryNot []string
 	// SampleEndpointURL is a reference to a mirror of an official data
 	// file from official sources during the pandemic which will allow
 	// this tool to be used against a source, and for tests to be run
 	// against a predictable dataset.
 	SampleEndpointURL = "https://gist.githubusercontent.com/fubarhouse/a827e4db69590556a3bf795ab1f93c89/raw/b536c5d534734da3c7484d9e1db8fe7ba56d7af5/sample-dataset-covidcheck.md"
+	// Slice input for input queries.
+
+	// NegativeQueries include queries to filter out.
+	NegativeQueries negativeQueries
+	// PositiveQueries include queries to filter in.
+	PositiveQueries positiveQueries
 )
 
 type (
@@ -135,7 +141,31 @@ type (
 		// Contact is the contact category - either Close, Casual or Monitor.
 		Contact string
 	}
+
+	// negativeQueries are the input queries to exclude.
+	negativeQueries []string
+	// positiveQueries are the input queries to include.
+	positiveQueries []string
+
 )
+
+func (i *negativeQueries) String() string {
+	return strings.Join(*i, ",")
+}
+
+func (i *negativeQueries) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *positiveQueries) String() string {
+	return strings.Join(*i, ",")
+}
+
+func (i *positiveQueries) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 func (e *Entries) Len() int {
 	return len(e.Items)
@@ -240,7 +270,7 @@ func (x *x) GetCSVReference() error {
 }
 
 // check will provide field validation, and will add the result to a
-// *MultiQueries if the validation passes. This will later be checked
+// *MultiQueries if the validation passes. This will later be checkedn
 // before being added to the filtered results in Query.
 func check(a, b interface{}, mq *MultiQueries) bool {
 	found := false
@@ -374,11 +404,15 @@ func (x *x) Query(e *Entry, params QueryParams) {
 				match = true
 			}
 		}
-		if queryNot != "" {
-			if b := checkNot(queryNot, fmt.Sprint(dataEntry), &mq); b {
-				match = false
-			} else {
-				match = true
+
+		if len(NegativeQueries) != 0 {
+			for _, q := range NegativeQueries {
+				fmt.Println(q, dataEntry)
+				if b := checkNot(q, fmt.Sprint(dataEntry), &mq); !b {
+					match = true
+				} else {
+					match = false
+				}
 			}
 		}
 
@@ -660,8 +694,8 @@ func main() {
 	flag.StringVar(&atime, "start-time", "", "start time")
 	flag.StringVar(&dtime, "end-time", "", "end time")
 	flag.StringVar(&query, "query", "", "arbitrary query")
-	flag.StringVar(&query, "q", "", "arbitrary query")
-	flag.StringVar(&queryNot, "qn", "", "arbitrary query reversed (not)")
+	flag.Var(&PositiveQueries, "q", "arbitrary query")
+	flag.Var(&NegativeQueries, "qn", "arbitrary query reversed (not)")
 	flag.BoolVar(&rawOutput, "raw", false, "display output as csv")
 	flag.IntVar(&width, "width", 50, "width of table columns")
 
