@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/olekukonko/tablewriter"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/olekukonko/tablewriter"
 )
 
 var (
@@ -482,76 +482,126 @@ func fieldTranslate(e *string) Entry {
 	Street := ""
 	Location := ""
 	for i, v := range components {
-		// Dynamic discovery of Date
-		datestring := strings.Split(trimQuotes(components[i]), " ")[0]
-		if ok, _ := regexp.MatchString("^.*[0-9]+\\/[0-9]+\\/[0-9][0-9]+.*$", v); ok {
-			t, err := time.Parse("2/1/2006", strings.Trim(datestring, " "))
-			if err == nil {
-				date = t
+		{
+			// Dynamic discovery of Date
+			datestring := strings.Split(trimQuotes(components[i]), " ")[0]
+			re, err := regexp.Compile(`^.*[0-9]+\/[0-9]+\/[0-9][0-9]+.*$`)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(datestring) {
+				t, err := time.Parse("2/1/2006", strings.Trim(datestring, " "))
+				if err == nil {
+					date = t
+				}
 			}
 		}
 
 		fieldData := trimQuotes(v)
 
-		// Dynamic discovery of Status
-		if ok, _ := regexp.MatchString("^(New||Updated||Archived)$", fieldData); ok {
-			if Status == "" {
-				Status = fieldData
-				continue
+		{
+			// Dynamic discovery of Status
+			re, err := regexp.Compile("^(New||Updated||Archived)$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if Status == "" {
+					Status = fieldData
+					continue
+				}
 			}
 		}
-		// Dynamic discovery of Contact
-		if ok, _ := regexp.MatchString("^(Close||Casual||Monitor)$", fieldData); ok {
-			if Contact == "" {
-				Contact = fieldData
-				continue
+
+		{
+			// Dynamic discovery of Contact
+			re, err := regexp.Compile("^(Close||Casual||Monitor)$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if Contact == "" {
+					Contact = fieldData
+					continue
+				}
 			}
 		}
-		if ok, _ := regexp.MatchString("^(ACT||NSW||VIC||TAS||SA||WA||NT||QLD)$", fieldData); ok {
-			if State == "" {
-				State = fieldData
-				continue
+
+		{
+			re, err := regexp.Compile("^(ACT||NSW||VIC||TAS||SA||WA||NT||QLD)$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if State == "" {
+					State = fieldData
+					continue
+				}
 			}
 		}
-		if ok, _ := regexp.MatchString("^[A-Z][a-z]+$", fieldData); ok {
-			if Suburb == "" {
+
+		{
+			re, err := regexp.Compile("^[A-Z][a-z]+$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if Suburb == "" {
+					Suburb = fieldData
+					continue
+				}
+			} else if fieldData == "Public Transport" {
 				Suburb = fieldData
 				continue
 			}
-		} else if fieldData == "Public Transport" {
-			Suburb = fieldData
-			continue
 		}
-		if ok, _ := regexp.MatchString("^[0-9]+(:)[0-9]+(am||pm||AM||PM)$", fieldData); ok {
 
-			// Start Time is expected to precede End Time directly, so we make sure they're
-			// paired up to identify the pair of values.
+		{
+			re, err := regexp.Compile("^[0-9]+(:)[0-9]+(am||pm||AM||PM)$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				// Start Time is expected to precede End Time directly, so we make sure they're
+				// paired up to identify the pair of values.
 
-			fieldData = strings.Replace(fieldData, "am", "AM", -1)
-			fieldData = strings.Replace(fieldData, "pm", "PM", -1)
-			timeOne, eOne := time.Parse(time.Kitchen, fieldData)
+				fieldData = strings.Replace(fieldData, "am", "AM", -1)
+				fieldData = strings.Replace(fieldData, "pm", "PM", -1)
+				timeOne, eOne := time.Parse(time.Kitchen, fieldData)
 
-			adjacentFieldData := trimQuotes(components[i+1])
-			adjacentFieldData = strings.Replace(adjacentFieldData, "am", "AM", -1)
-			adjacentFieldData = strings.Replace(adjacentFieldData, "pm", "PM", -1)
-			timeTwo, eTwo := time.Parse(time.Kitchen, adjacentFieldData)
+				adjacentFieldData := trimQuotes(components[i+1])
+				adjacentFieldData = strings.Replace(adjacentFieldData, "am", "AM", -1)
+				adjacentFieldData = strings.Replace(adjacentFieldData, "pm", "PM", -1)
+				timeTwo, eTwo := time.Parse(time.Kitchen, adjacentFieldData)
 
-			if eOne == nil && eTwo == nil {
-				TimeStart = &timeOne
-				TimeEnd = &timeTwo
+				if eOne == nil && eTwo == nil {
+					TimeStart = &timeOne
+					TimeEnd = &timeTwo
+				}
 			}
 		}
 
-		if ok, _ := regexp.MatchString("^([A-Z]||[0-9]).*[a-z].*$", fieldData); ok {
-			if Location == "" {
-				Location = fieldData
-				continue
+		{
+			re, err := regexp.Compile("^([A-Z]||[0-9]).*[a-z].*$")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if Location == "" {
+					Location = fieldData
+				}
 			}
 		}
-		if ok, _ := regexp.MatchString("^([0-9-\\/]+\\ [A-Z][a-z].*||[A-Z][a-z].*)$", fieldData); ok {
-			if Street == "" {
-				Street = fieldData
-				continue
+
+		{
+			re, err := regexp.Compile(`^([0-9-\/]+\ [A-Z][a-z].*||[A-Z][a-z].*)$`)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if re.MatchString(fieldData) {
+				if Street == "" {
+					Street = fieldData
+				}
 			}
 		}
 	}
@@ -569,7 +619,6 @@ func fieldTranslate(e *string) Entry {
 	}
 
 	return *newEntry
-
 }
 
 // SetCSVData will populate the RawResultsww field with the inputs after
@@ -652,7 +701,7 @@ func (x *x) Clean() {
 
 			// I don't even know how this garbage ended up here...
 
-			line = strings.Replace(line, "\n", "", 0)
+			line = strings.Replace(line, "\n", "", 1)
 			line = strings.Trim(line, string(rune(13)))
 			line = strings.Trim(line, string(rune(33)))
 			line = strings.Trim(line, string(rune(44)))
@@ -669,7 +718,13 @@ func (x *x) Clean() {
 func generateData() *x {
 	c := &x{}
 	c.DataEndpoint = SampleEndpointURL
-	c.GetCSVData()
+	e := c.GetCSVData()
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	if e != nil {
+		fmt.Println(e.Error())
+	}
 	c.SetCSVData()
 	return c
 }
@@ -712,9 +767,18 @@ func main() {
 	covid := &x{}
 
 	if file == "" {
-		covid.GetHTML(endpoint)
-		covid.GetCSVReference()
-		covid.GetCSVData()
+		e := covid.GetHTML(endpoint)
+		if e != nil {
+			fmt.Println(e.Error())
+		}
+		e = covid.GetCSVReference()
+		if e != nil {
+			fmt.Println(e.Error())
+		}
+		e = covid.GetCSVData()
+		if e != nil {
+			fmt.Println(e.Error())
+		}
 	} else {
 		content, err := ioutil.ReadFile(file)
 		if err != nil {
