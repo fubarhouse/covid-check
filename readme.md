@@ -37,9 +37,10 @@ covid-check [flags]
 | Generate    | `-generate`             | Download an official dataset from a mirror and print to stdout                                |
 | Limit       | `-limit`                | Specify a maximum quantity of items to show.                                                  |
 | Location    | `-location Coles`       | search string of location field                                                               |
-| Query       | `--query phillip`       | An arbitrary query - find anything matching input (including regex & multiple values)         |
-| Query       | `--query-not phillip`   | An arbitrary query - exclude find anything matching input (including regex & multiple values) |
-| Query       | `--q phillip`           | An arbitrary query - find anything matching input (including regex)                           |
+| Query       | `--querys phillip`       | An arbitrary query - find anything matching input (including regex & multiple values)         |
+| Query Not   | `--query-not phillip`   | An arbitrary query - exclude find anything matching input (including regex & multiple values) |
+| Query       | `-q phillip`           | An arbitrary query - find anything matching input (including regex)                           |
+| Query Not   | `-qn phillip`           | An arbitrary query - exclude find anything matching input (including regex & multiple values) |
 | Raw         | `-raw`                  | Performs all search functionality but displays as csv output.                                 |
 | Start Time  | `-start-time 9:00am`    | search string for arrival time - represented as a string                                      |
 | State       | `-state ACT`            | search string of state field                                                                  |
