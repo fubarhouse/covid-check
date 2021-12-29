@@ -25,8 +25,10 @@ jobs:
         run: go mod download
         env:
           GO111MODULE: on
-      - name: Run
+      - name: Run (normal)
         run: go run main.go
+      - name: Run (raw)
+        run: go run main.go --raw
   daily_test:
     runs-on: ubuntu-18.04
     steps:
