@@ -19,6 +19,12 @@ Instead, you can install or build from source using the `go` toolchain:
 go install github.com/fubarhouse/covid-check@latest
 ```
 
+## Automated runs
+
+You can view the [Github Actions page](https://github.com/fubarhouse/covid-check/actions) to see recent CI jobs run at least once
+daily. We have standard table format and raw csv formats which I now use as
+a personal backup for daily data.
+
 ## Usage
 
 ```shell
